@@ -1,4 +1,5 @@
 ﻿#r "nuget: MathNet.Spatial, 0.6.0"
+#r "nuget: XPlot.Plotly, 4.0.6"
 
 open MathNet.Spatial.Euclidean
 open System
@@ -8,7 +9,7 @@ open System.IO
 module Utils =
     let rng = Random().NextDouble
 
-    let choose_weighted lst key =
+    let choose_weighted key lst =
         let pick = rng () * List.sumBy key lst
 
         let rec crawl lst sum =
@@ -21,7 +22,7 @@ module Utils =
 
         crawl lst 0.
 
-    let choose_random lst = choose_weighted lst (fun _ -> 1.)
+    let choose_random = choose_weighted (fun _ -> 1.)
 
     let iterate func initial count =
         let rec inner intermediate n =
@@ -32,11 +33,23 @@ module Utils =
 
         inner initial count
 
+    let iterations func initial count =
+        let rec inner intermediate n =
+            if n = 1 then
+                [ func intermediate ]
+            else
+                intermediate :: inner (func intermediate) (n - 1)
+
+        inner initial count
+
+
 type atrakcja = { id: int; loc: Point2D }
 
 type ant = List<atrakcja>
 
-type state = { pheromones: array<float> }
+type state =
+    { pheromones: array<float>
+      ants: List<ant> }
 
 type conf =
     { ant_population: int
@@ -50,11 +63,12 @@ type conf =
 let mutable conf =
     { ant_population = 10
       rand_chance = 0.3
-      pheromone_weight = 1.
+      pheromone_weight = 10.0
       heuristic_weight = 1.
-      iteration_count = 100
-      evaporation_rate = 0.1
+      iteration_count = 1000
+      evaporation_rate = 0.01
       filename = "./A-n32-k5.txt" }
+//filename = "./A-n80-k10.txt" }
 
 type mapa =
     { lokacje: List<atrakcja>
@@ -115,15 +129,28 @@ module Loading =
               ilość = places.Length
               odległości = distances }
 
+module Ant =
+    let edges = List.pairwise
+
+    let travel_distance = List.sumBy (fun x -> mapa.odległości[idx x])
+
+    let distance = edges >> travel_distance
 
 
 module Simulation =
+    let liek state current destination =
+        let i = idx (current, destination)
+        let ph = state.pheromones[i]
+        let dist = mapa.odległości[i]
+
+        //(conf.heuristic_weight / dist)
+        //+ (conf.pheromone_weight * ph)
+        ph / dist
 
     let choose_direction state (ant: ant) =
         let current = ant.Head
         let avialable = mapa.lokacje |> List.except ant
-        // randomly, TODO: fix
-        Utils.choose_random avialable
+        Utils.choose_weighted (liek state current) avialable
 
     let move state ant : ant =
         let next = choose_direction state ant
@@ -135,37 +162,82 @@ module Simulation =
 
     let advance state =
         let ph' = Array.create mapa.odległości.Length 0.0
+        let ants = [ for _ in 1 .. conf.ant_population -> run_ant state ]
 
-        for _ in 1 .. conf.ant_population do
-            let ant = run_ant state
-            let edges = List.pairwise ant
+        for ant in ants do
+            let edges = Ant.edges ant
+            let weight = (1.0 / Ant.travel_distance edges)
 
-            let travel_distance =
-                edges
-                |> List.map (fun x -> mapa.odległości[idx x])
-                |> List.sum
-
-            let weight = (1.0 / travel_distance)
-
+            // apply trail
             for edge in edges do
                 let i = idx edge
-                ph'[i] <- ph'[i] + 1.0
-                ()
-            //printfn "x: %d" ant.Length
-            ()
+                ph'[i] <- ph'[i] + weight
 
-        printfn "stan: \n%A" state.pheromones
-        { pheromones = Array.map2 (+) state.pheromones ph' }
+        let phsum =
+            Array.map2 (fun v v' -> v * (1.0 - conf.evaporation_rate) + v') state.pheromones ph'
+
+        { pheromones = phsum; ants = ants }
 
 
     let create_initial_state () =
-        { pheromones = Array.create mapa.odległości.Length 0.0 }
+        { pheromones = Array.create mapa.odległości.Length 0.
+          ants = [] }
 
     let simulate () =
         let initial = create_initial_state ()
-        Utils.iterate advance initial 2
+        Utils.iterations advance initial conf.iteration_count
+
+
+module Plot =
+    open XPlot.Plotly
+
+    let extract states =
+        states
+        |> List.tail
+        |> List.map (fun x -> x.ants)
+        |> List.map (List.map (fun ant -> Ant.distance ant))
+
+    let max = List.max
+
+    let median l =
+        let c = List.length l
+        let l = List.sort l
+
+        if c % 2 = 1 then
+            l[c / 2]
+        else
+            (l[(c + 1) / 2] + l[(c - 1) / 2]) / 2.
+
+
+    let gen data =
+        let data = extract data
+        let ys = List.concat data
+
+        let xs =
+            data
+            |> List.mapi (fun x l -> List.map (fun _ -> x + 1) l)
+            |> List.concat
+
+        Scatter(
+            x = xs,
+            y = ys,
+            mode = "markers",
+            //name = "Latin America",
+            marker = Marker(color = "rgba(142, 124, 195, 20)", size = 5)
+        )
+
+    let show data =
+        [ gen data ]
+        |> Chart.Plot
+        //        |> Chart.WithLayout styledLayout
+        |> Chart.WithWidth 1900
+        |> Chart.WithHeight 800
+        |> Chart.Show
 
 
 Loading.init () // welp, no multithreading :/
 
-Simulation.simulate () |> ignore
+#time "on"
+let results = Simulation.simulate ()
+Plot.show results
+#time "off"
