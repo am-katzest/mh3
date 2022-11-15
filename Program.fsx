@@ -61,12 +61,12 @@ type conf =
       filename: string }
 // statyczna konfiguracja
 let mutable conf =
-    { ant_population = 10
+    { ant_population = 100
       rand_chance = 0.3
       pheromone_weight = 10.0
       heuristic_weight = 1.
       iteration_count = 1000
-      evaporation_rate = 0.01
+      evaporation_rate = 0.3
       filename = "./A-n32-k5.txt" }
 //filename = "./A-n80-k10.txt" }
 
@@ -185,7 +185,9 @@ module Simulation =
 
     let simulate () =
         let initial = create_initial_state ()
+
         Utils.iterations advance initial conf.iteration_count
+        |> List.tail
 
 
 module Plot =
@@ -193,11 +195,10 @@ module Plot =
 
     let extract states =
         states
-        |> List.tail
         |> List.map (fun x -> x.ants)
         |> List.map (List.map (fun ant -> Ant.distance ant))
 
-    let max = List.max
+    let min = List.min
 
     let median l =
         let c = List.length l
@@ -211,33 +212,45 @@ module Plot =
 
     let gen data =
         let data = extract data
-        let ys = List.concat data
 
-        let xs =
-            data
-            |> List.mapi (fun x l -> List.map (fun _ -> x + 1) l)
-            |> List.concat
-
-        Scatter(
-            x = xs,
-            y = ys,
-            mode = "markers",
-            //name = "Latin America",
-            marker = Marker(color = "rgba(142, 124, 195, 20)", size = 5)
-        )
+        [ Scatter(x = [ 1 .. conf.iteration_count ], y = List.map min data, mode = "lines", name = "min")
+          Scatter(x = [ 1 .. conf.iteration_count ], y = List.map median data, mode = "lines", name = "median") ]
 
     let show data =
-        [ gen data ]
+        gen data
         |> Chart.Plot
         //        |> Chart.WithLayout styledLayout
         |> Chart.WithWidth 1900
         |> Chart.WithHeight 800
         |> Chart.Show
 
+    let ant (ant: ant) =
+        printfn "length = %f" (Ant.distance ant)
+
+        Scatter(
+            x = List.map (fun p -> p.loc.X) ant,
+            y = List.map (fun p -> p.loc.Y) ant,
+            mode = "lines",
+            opacity = 0.5,
+            name = sprintf "length = %f" (Ant.distance ant)
+        )
+
+    let ants ants =
+        ants |> List.map ant |> Chart.Plot |> Chart.Show
+
 
 Loading.init () // welp, no multithreading :/
 
 #time "on"
 let results = Simulation.simulate ()
+
+let best_ones =
+    results
+    |> List.map (fun x -> x.ants)
+    |> List.concat
+    |> List.sortByDescending Ant.distance
+    |> List.take 5
+
+Plot.ants best_ones
 Plot.show results
 #time "off"
