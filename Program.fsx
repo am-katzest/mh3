@@ -1,5 +1,4 @@
 ﻿#r "nuget: MathNet.Spatial, 0.6.0"
-#load "Utils.fsx"
 
 open MathNet.Spatial.Euclidean
 open System
@@ -132,17 +131,41 @@ module Simulation =
 
     let run_ant state : ant =
         let start = Utils.choose_random mapa.lokacje
-        Utils.iterate (move state) [ start ] mapa.ilość
+        Utils.iterate (move state) [ start ] (mapa.ilość - 1)
 
-    let create_initial_state () = Array.create mapa.odległości.Length 0.0
+    let advance state =
+        let ph' = Array.create mapa.odległości.Length 0.0
+
+        for _ in 1 .. conf.ant_population do
+            let ant = run_ant state
+            let edges = List.pairwise ant
+
+            let travel_distance =
+                edges
+                |> List.map (fun x -> mapa.odległości[idx x])
+                |> List.sum
+
+            let weight = (1.0 / travel_distance)
+
+            for edge in edges do
+                let i = idx edge
+                ph'[i] <- ph'[i] + 1.0
+                ()
+            //printfn "x: %d" ant.Length
+            ()
+
+        printfn "stan: \n%A" state.pheromones
+        { pheromones = Array.map2 (+) state.pheromones ph' }
+
+
+    let create_initial_state () =
+        { pheromones = Array.create mapa.odległości.Length 0.0 }
 
     let simulate () =
         let initial = create_initial_state ()
-        3
+        Utils.iterate advance initial 2
 
 
 Loading.init () // welp, no multithreading :/
-//simulate ()
-let zeros = Simulation.create_initial_state ()
 
-Simulation.run_ant zeros
+Simulation.simulate () |> ignore
