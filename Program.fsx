@@ -1,9 +1,10 @@
 ﻿#r "nuget: MathNet.Spatial, 0.6.0"
-#r "nuget: XPlot.Plotly, 4.0.6"
+#r "nuget: Plotly.NET, 3.0.0"
 
 open MathNet.Spatial.Euclidean
 open System
 open System.IO
+
 
 
 module Utils =
@@ -67,13 +68,33 @@ type conf =
       filename: string
       runs: int }
 
+let files =
+    [ "./A-n32-k5.txt"
+      "./A-n80-k10.txt"
+      "./B-n31-k5.txt"
+      "./B-n78-k10.txt"
+      "./P-n16-k8.txt"
+      "./P-n76-k5.txt" ]
+
+let bounds =
+    function
+    | "./A-n32-k5.txt" -> (400, 700)
+    //    |"./A-n80-k10.txt"
+//    |"./B-n31-k5.txt"
+//    |"./B-n78-k10.txt"
+//    |"./P-n16-k8.txt"
+//    |"./P-n76-k5.txt"
+    | _ -> 100, 200
+
+
+
 // statyczna konfiguracja
 let mutable conf =
-    { ant_population = 50
+    { ant_population = 10
       rand_chance = 0.001
-      pheromone_weight = 1.
+      pheromone_weight = 1.1
       heuristic_weight = 1.
-      iteration_count = 500
+      iteration_count = 200
       evaporation_rate = 0.1
       filename = "./A-n32-k5.txt" // "./A-n80-k10.txt"
       runs = 10 }
@@ -205,27 +226,25 @@ module Simulation =
 
 
 module Plot =
-    open XPlot.Plotly
-    open XPlot.Plotly.Layout
+    open Plotly.NET
 
     let ant (ant: ant) =
         printfn "length = %f" (Ant.distance ant)
 
-        Scatter(
-            x = List.map (fun p -> p.loc.X) ant,
-            y = List.map (fun p -> p.loc.Y) ant,
-            mode = "lines",
-            opacity = 0.5,
-            name = sprintf "length = %f" (Ant.distance ant)
+        Chart.Line(
+            List.map (fun p -> p.loc.X) ant,
+            List.map (fun p -> p.loc.Y) ant,
+            Opacity = 0.5,
+            Name = sprintf "length = %f" (Ant.distance ant)
         )
 
     let ants ants =
         ants
         |> List.map ant
-        |> Chart.Plot
-        |> Chart.WithWidth 900
-        |> Chart.WithHeight 900
-        |> Chart.Show
+        |> Chart.combine
+        |> Chart.withSize (1100, 1000)
+        |> Chart.withTitle (sprintf "%A" conf)
+        |> Chart.show
 
 
     let median l =
@@ -262,37 +281,45 @@ module Plot =
 
         printfn "%A %A" best_so_far[0].Length best_of_each_generation[0].Length
         ants best_ones
-        // Plot.show results
-        [ Scatter(
-              x = [ 1 .. conf.iteration_count ],
-              y =
-                  (best_of_each_generation
-                   |> List.transpose
-                   |> List.map median),
-              mode = "lines",
-              name = "najlepsze w pokoleniu (mediana)"
+
+        [ Chart.Line(
+              [ 1 .. conf.iteration_count ],
+              (best_of_each_generation
+               |> List.transpose
+               |> List.map List.min),
+              Name = "najlepsze w pokoleniu (min)"
           )
-          Scatter(
-              x = [ 1 .. conf.iteration_count ],
-              y = (best_so_far |> List.transpose |> List.map median),
-              mode = "lines",
-              name = "najlepsze dotychcasz (mediana)"
+          Chart.Line(
+              [ 1 .. conf.iteration_count ],
+              (best_so_far |> List.transpose |> List.map median),
+              Name = "najlepsze dotychcasz (mediana)"
           )
-          Scatter(
-              x = [ 1 .. conf.iteration_count ],
-              y = (best_so_far |> List.transpose |> List.map List.min),
-              mode = "lines",
-              name = "najlepsze dotychcasz (minimum)"
+          Chart.Line(
+              [ 1 .. conf.iteration_count ],
+              (best_so_far |> List.transpose |> List.map List.min),
+              Name = "najlepsze dotychcasz (minimum)"
           ) ]
-        |> Chart.Plot
-        //        |> Chart.WithLayout styledLayout
-        |> Chart.WithWidth 1900
-        |> Chart.WithHeight 800
-        |> Chart.Show
+        |> Chart.combine
+        |> Chart.withTitle (sprintf "%A" conf)
+        |> Chart.withSize (1900, 800)
+        //|> Chart.withXAxis "pokolenie"
+        //|> Chart.withYTitle "dystans"
+        |> Chart.show
 
 
 
 
         "meow"
+// printf "%A" conf
+
+conf <-
+    { ant_population = 10
+      rand_chance = 0.001
+      pheromone_weight = 1.
+      heuristic_weight = 1.
+      iteration_count = 200
+      evaporation_rate = 0.05
+      filename = "./A-n32-k5.txt" // "./A-n80-k10.txt"
+      runs = 10 }
 
 Plot.graph ()
