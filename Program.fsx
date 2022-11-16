@@ -48,7 +48,6 @@ module Utils =
 
         inner initial count
 
-
 type atrakcja = { id: int; loc: Point2D }
 
 type ant = List<atrakcja>
@@ -83,7 +82,7 @@ let bounds =
     | "./B-n31-k5.txt" -> (180, 300)
     | "./B-n78-k10.txt" -> (450, 750)
     | "./P-n16-k8.txt" -> (120, 220)
-    | "./P-n76-k5.txt" -> (600, 900)
+    | "./P-n76-k5.txt" -> (500, 900)
     | _ -> 0, 1000
 
 
@@ -194,21 +193,26 @@ module Ant =
 
 
 module Simulation =
-    let advance state =
-        let ph' = Array.create mapa.odległości.Length 0.0
-        let ants = [ for _ in 1 .. conf.ant_population -> Ant.run state ]
+    let sum_trails ants =
+        let ph = Array.create mapa.odległości.Length 0.0
 
         for ant in ants do
             let edges = Ant.edges ant
             let weight = (1.0 / Ant.travel_distance edges)
 
-            // apply trail
             for edge in edges do
                 let i = Atrakcja.idx edge
-                ph'[i] <- ph'[i] + weight
+                ph[i] <- ph[i] + weight
+
+        ph
+
+    let advance state =
+        let ants = [ for _ in 1 .. conf.ant_population -> Ant.run state ]
 
         let phsum =
-            Array.map2 (fun v v' -> v * (1.0 - conf.evaporation_rate) + v') state.pheromones ph'
+            state.pheromones
+            |> Array.map ((*) (1.0 - conf.evaporation_rate))
+            |> Array.map2 (+) (sum_trails ants)
 
         { pheromones = phsum; ants = ants }
 
@@ -313,12 +317,14 @@ module Plot =
 
 conf <-
     { ant_population = 10
-      rand_chance = 0.001
+      rand_chance = 0.01
       pheromone_weight = 1.
       heuristic_weight = 1.
-      iteration_count = 200
+      iteration_count = 600
       evaporation_rate = 0.5
       filename = files[5]
-      runs = 10 }
+      runs = 3 }
 
+#time "on"
 Plot.graph ()
+#time "off"
