@@ -79,12 +79,12 @@ let files =
 let bounds =
     function
     | "./A-n32-k5.txt" -> (400, 700)
-    //    |"./A-n80-k10.txt"
-//    |"./B-n31-k5.txt"
-//    |"./B-n78-k10.txt"
-//    |"./P-n16-k8.txt"
-//    |"./P-n76-k5.txt"
-    | _ -> 100, 200
+    | "./A-n80-k10.txt" -> (700, 1100)
+    | "./B-n31-k5.txt" -> (180, 300)
+    | "./B-n78-k10.txt" -> (450, 750)
+    | "./P-n16-k8.txt" -> (120, 220)
+    | "./P-n76-k5.txt" -> (600, 900)
+    | _ -> 0, 1000
 
 
 
@@ -302,12 +302,11 @@ module Plot =
         |> Chart.combine
         |> Chart.withTitle (sprintf "%A" conf)
         |> Chart.withSize (1900, 800)
+        |> Chart.withXAxisStyle ("pokolenie")
+        |> Chart.withYAxisStyle ("dystans", MinMax = (bounds conf.filename))
         //|> Chart.withXAxis "pokolenie"
         //|> Chart.withYTitle "dystans"
         |> Chart.show
-
-
-
 
         "meow"
 // printf "%A" conf
@@ -318,8 +317,8 @@ conf <-
       pheromone_weight = 1.
       heuristic_weight = 1.
       iteration_count = 200
-      evaporation_rate = 0.05
-      filename = "./A-n32-k5.txt" // "./A-n80-k10.txt"
+      evaporation_rate = 0.5
+      filename = files[5]
       runs = 10 }
 
 Plot.graph ()
