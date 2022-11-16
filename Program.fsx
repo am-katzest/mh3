@@ -47,6 +47,7 @@ type atrakcja = { id: int; loc: Point2D }
 
 type ant = List<atrakcja>
 
+
 type state =
     { pheromones: array<float>
       ants: List<ant> }
@@ -61,14 +62,15 @@ type conf =
       filename: string }
 // statyczna konfiguracja
 let mutable conf =
-    { ant_population = 100
-      rand_chance = 0.3
-      pheromone_weight = 10.0
+    { ant_population = 20
+      rand_chance = 0.01
+      pheromone_weight = 10.0 // idk co większość z nich oznacza :garf:
       heuristic_weight = 1.
-      iteration_count = 1000
-      evaporation_rate = 0.3
+      iteration_count = 500
+      evaporation_rate = 0.1
       filename = "./A-n32-k5.txt" }
 //filename = "./A-n80-k10.txt" }
+
 
 type mapa =
     { lokacje: List<atrakcja>
@@ -80,23 +82,22 @@ let mutable mapa =
       ilość = 4
       odległości = [||] }
 
+module Atrakcja =
+    let order (a, b) = if a.id > b.id then (a, b) else (b, a)
 
-let order (a, b) = if a.id > b.id then (a, b) else (b, a)
-
-
-//przechowywujemy dane w jednowymiarowej macieży
-//dla ilość=4 indeksowanie wygląda tak:
-//-abcd
-//a
-//b1
-//c24
-//d356
-let idx (a, b) =
-    if a = b then failwith "loopback"
-    let (a, b) = order (a, b)
-    let a = a.id - 1
-    let b = b.id - 1
-    a * (a - 1) / 2 + b
+    //przechowywujemy dane w jednowymiarowej macieży
+    //dla ilość=4 indeksowanie wygląda tak:
+    //-abcd
+    //a
+    //b1
+    //c24
+    //d356
+    let idx (a, b) =
+        if a = b then failwith "loopback"
+        let (a, b) = order (a, b)
+        let a = a.id - 1
+        let b = b.id - 1
+        a * (a - 1) / 2 + b
 
 module Loading =
     let read_loc (s: string) =
@@ -122,7 +123,7 @@ module Loading =
         let distances = Array.create edges.Length 0.0
 
         for pair in edges do
-            distances[idx pair] <- distance pair
+            distances[Atrakcja.idx pair] <- distance pair
 
         mapa <-
             { lokacje = places
@@ -132,14 +133,13 @@ module Loading =
 module Ant =
     let edges = List.pairwise
 
-    let travel_distance = List.sumBy (fun x -> mapa.odległości[idx x])
+    let travel_distance = List.sumBy (fun x -> mapa.odległości[Atrakcja.idx x])
 
     let distance = edges >> travel_distance
 
 
-module Simulation =
     let liek state current destination =
-        let i = idx (current, destination)
+        let i = Atrakcja.idx (current, destination)
         let ph = state.pheromones[i]
         let dist = mapa.odległości[i]
 
@@ -150,19 +150,26 @@ module Simulation =
     let choose_direction state (ant: ant) =
         let current = ant.Head
         let avialable = mapa.lokacje |> List.except ant
-        Utils.choose_weighted (liek state current) avialable
+
+        if Utils.rng () > conf.rand_chance then
+            Utils.choose_weighted (liek state current) avialable
+        else
+            Utils.choose_random avialable
 
     let move state ant : ant =
         let next = choose_direction state ant
         next :: ant
 
-    let run_ant state : ant =
+    let run state : ant =
         let start = Utils.choose_random mapa.lokacje
         Utils.iterate (move state) [ start ] (mapa.ilość - 1)
 
+
+
+module Simulation =
     let advance state =
         let ph' = Array.create mapa.odległości.Length 0.0
-        let ants = [ for _ in 1 .. conf.ant_population -> run_ant state ]
+        let ants = [ for _ in 1 .. conf.ant_population -> Ant.run state ]
 
         for ant in ants do
             let edges = Ant.edges ant
@@ -170,7 +177,7 @@ module Simulation =
 
             // apply trail
             for edge in edges do
-                let i = idx edge
+                let i = Atrakcja.idx edge
                 ph'[i] <- ph'[i] + weight
 
         let phsum =
@@ -180,7 +187,7 @@ module Simulation =
 
 
     let create_initial_state () =
-        { pheromones = Array.create mapa.odległości.Length 0.
+        { pheromones = Array.create mapa.odległości.Length 1e-9
           ants = [] }
 
     let simulate () =
@@ -192,6 +199,7 @@ module Simulation =
 
 module Plot =
     open XPlot.Plotly
+    open XPlot.Plotly.Layout
 
     let extract states =
         states
@@ -236,21 +244,25 @@ module Plot =
         )
 
     let ants ants =
-        ants |> List.map ant |> Chart.Plot |> Chart.Show
-
+        ants
+        |> List.map ant
+        |> Chart.Plot
+        |> Chart.WithWidth 800
+        |> Chart.WithHeight 800
+        |> Chart.Show
 
 Loading.init () // welp, no multithreading :/
 
 #time "on"
 let results = Simulation.simulate ()
+#time "off"
 
 let best_ones =
     results
     |> List.map (fun x -> x.ants)
     |> List.concat
-    |> List.sortByDescending Ant.distance
+    |> List.sortBy Ant.distance
     |> List.take 5
 
 Plot.ants best_ones
 Plot.show results
-#time "off"
