@@ -7,6 +7,11 @@ open System.IO
 
 
 module Utils =
+    let run_parallel f n =
+        Array.replicate n ()
+        |> Array.Parallel.map f
+        |> List.ofArray
+
     let rng = Random().NextDouble
 
     let choose_weighted key lst =
@@ -59,17 +64,19 @@ type conf =
       heuristic_weight: float
       iteration_count: int
       evaporation_rate: float
-      filename: string }
+      filename: string
+      runs: int }
+
 // statyczna konfiguracja
 let mutable conf =
-    { ant_population = 20
-      rand_chance = 0.01
-      pheromone_weight = 10.0 // idk co większość z nich oznacza :garf:
+    { ant_population = 50
+      rand_chance = 0.001
+      pheromone_weight = 1.
       heuristic_weight = 1.
       iteration_count = 500
       evaporation_rate = 0.1
-      filename = "./A-n32-k5.txt" }
-//filename = "./A-n80-k10.txt" }
+      filename = "./A-n32-k5.txt" // "./A-n80-k10.txt"
+      runs = 10 }
 
 
 type mapa =
@@ -141,11 +148,10 @@ module Ant =
     let liek state current destination =
         let i = Atrakcja.idx (current, destination)
         let ph = state.pheromones[i]
-        let dist = mapa.odległości[i]
+        let heur = 1.0 / mapa.odległości[i]
 
-        //(conf.heuristic_weight / dist)
-        //+ (conf.pheromone_weight * ph)
-        ph / dist
+        (ph ** conf.pheromone_weight)
+        * (heur ** conf.heuristic_weight)
 
     let choose_direction state (ant: ant) =
         let current = ant.Head
@@ -197,40 +203,10 @@ module Simulation =
         |> List.tail
 
 
+
 module Plot =
     open XPlot.Plotly
     open XPlot.Plotly.Layout
-
-    let extract states =
-        states
-        |> List.map (fun x -> x.ants)
-        |> List.map (List.map (fun ant -> Ant.distance ant))
-
-    let min = List.min
-
-    let median l =
-        let c = List.length l
-        let l = List.sort l
-
-        if c % 2 = 1 then
-            l[c / 2]
-        else
-            (l[(c + 1) / 2] + l[(c - 1) / 2]) / 2.
-
-
-    let gen data =
-        let data = extract data
-
-        [ Scatter(x = [ 1 .. conf.iteration_count ], y = List.map min data, mode = "lines", name = "min")
-          Scatter(x = [ 1 .. conf.iteration_count ], y = List.map median data, mode = "lines", name = "median") ]
-
-    let show data =
-        gen data
-        |> Chart.Plot
-        //        |> Chart.WithLayout styledLayout
-        |> Chart.WithWidth 1900
-        |> Chart.WithHeight 800
-        |> Chart.Show
 
     let ant (ant: ant) =
         printfn "length = %f" (Ant.distance ant)
@@ -247,22 +223,76 @@ module Plot =
         ants
         |> List.map ant
         |> Chart.Plot
-        |> Chart.WithWidth 800
+        |> Chart.WithWidth 900
+        |> Chart.WithHeight 900
+        |> Chart.Show
+
+
+    let median l =
+        let c = List.length l
+        let l = List.sort l
+
+        if c % 2 = 1 then
+            l[c / 2]
+        else
+            (l[(c + 1) / 2] + l[(c - 1) / 2]) / 2.
+
+    let graph () =
+        Loading.init ()
+        let results = Utils.run_parallel Simulation.simulate conf.runs
+
+        let best_ones =
+            results
+            |> List.concat
+            |> List.map (fun s -> s.ants)
+            |> List.concat
+            |> List.sortBy Ant.distance
+            |> List.take 5
+
+        let distances =
+            results
+            |> List.map (List.map (fun s -> List.map Ant.distance s.ants))
+
+        let best_of_each_generation = List.map (List.map List.min) distances
+
+        let best_so_far =
+            List.map (fun (x :: xs) -> List.scan min x xs) best_of_each_generation
+
+
+
+        printfn "%A %A" best_so_far[0].Length best_of_each_generation[0].Length
+        ants best_ones
+        // Plot.show results
+        [ Scatter(
+              x = [ 1 .. conf.iteration_count ],
+              y =
+                  (best_of_each_generation
+                   |> List.transpose
+                   |> List.map median),
+              mode = "lines",
+              name = "najlepsze w pokoleniu (mediana)"
+          )
+          Scatter(
+              x = [ 1 .. conf.iteration_count ],
+              y = (best_so_far |> List.transpose |> List.map median),
+              mode = "lines",
+              name = "najlepsze dotychcasz (mediana)"
+          )
+          Scatter(
+              x = [ 1 .. conf.iteration_count ],
+              y = (best_so_far |> List.transpose |> List.map List.min),
+              mode = "lines",
+              name = "najlepsze dotychcasz (minimum)"
+          ) ]
+        |> Chart.Plot
+        //        |> Chart.WithLayout styledLayout
+        |> Chart.WithWidth 1900
         |> Chart.WithHeight 800
         |> Chart.Show
 
-Loading.init () // welp, no multithreading :/
 
-#time "on"
-let results = Simulation.simulate ()
-#time "off"
 
-let best_ones =
-    results
-    |> List.map (fun x -> x.ants)
-    |> List.concat
-    |> List.sortBy Ant.distance
-    |> List.take 5
 
-Plot.ants best_ones
-Plot.show results
+        "meow"
+
+Plot.graph ()
