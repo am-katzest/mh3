@@ -50,7 +50,11 @@ module Utils =
 
 type atrakcja = { id: int; loc: Point2D }
 
-type ant = List<atrakcja>
+
+type ant =
+    { visited: List<atrakcja>
+      edges: List<atrakcja * atrakcja>
+      distance: float }
 
 
 type state =
@@ -82,7 +86,7 @@ let bounds =
     | "./B-n31-k5.txt" -> (180, 300)
     | "./B-n78-k10.txt" -> (450, 750)
     | "./P-n16-k8.txt" -> (120, 220)
-    | "./P-n76-k5.txt" -> (500, 900)
+    | "./P-n76-k5.txt" -> (900, 1500)
     | _ -> 0, 1000
 
 
@@ -158,12 +162,14 @@ module Loading =
               odległości = distances }
 
 module Ant =
-    let edges = List.pairwise
 
-    let travel_distance = List.sumBy (fun x -> mapa.odległości[Atrakcja.idx x])
+    let stat ant =
+        let edges = List.pairwise ant
+        let distance = List.sumBy (fun x -> mapa.odległości[Atrakcja.idx x]) edges
 
-    let distance = edges >> travel_distance
-
+        { edges = edges
+          distance = distance
+          visited = ant }
 
     let liek state current destination =
         let i = Atrakcja.idx (current, destination)
@@ -173,8 +179,8 @@ module Ant =
         (ph ** conf.pheromone_weight)
         * (heur ** conf.heuristic_weight)
 
-    let choose_direction state (ant: ant) =
-        let current = ant.Head
+    let choose_direction state ant =
+        let current = List.head ant
         let avialable = mapa.lokacje |> List.except ant
 
         if Utils.rng () > conf.rand_chance then
@@ -182,13 +188,15 @@ module Ant =
         else
             Utils.choose_random avialable
 
-    let move state ant : ant =
+    let move state ant =
         let next = choose_direction state ant
         next :: ant
 
-    let run state : ant =
+    let run state =
         let start = Utils.choose_random mapa.lokacje
+
         Utils.iterate (move state) [ start ] (mapa.ilość - 1)
+        |> stat
 
 
 
@@ -197,8 +205,8 @@ module Simulation =
         let ph = Array.create mapa.odległości.Length 0.0
 
         for ant in ants do
-            let edges = Ant.edges ant
-            let weight = (1.0 / Ant.travel_distance edges)
+            let edges = ant.edges
+            let weight = (1.0 / ant.distance)
 
             for edge in edges do
                 let i = Atrakcja.idx edge
@@ -233,13 +241,13 @@ module Plot =
     open Plotly.NET
 
     let ant (ant: ant) =
-        printfn "length = %f" (Ant.distance ant)
+        printfn "length = %f" ant.distance
 
         Chart.Line(
-            List.map (fun p -> p.loc.X) ant,
-            List.map (fun p -> p.loc.Y) ant,
+            List.map (fun p -> p.loc.X) ant.visited,
+            List.map (fun p -> p.loc.Y) ant.visited,
             Opacity = 0.5,
-            Name = sprintf "length = %f" (Ant.distance ant)
+            Name = sprintf "length = %f" ant.distance
         )
 
     let ants ants =
@@ -269,12 +277,12 @@ module Plot =
             |> List.concat
             |> List.map (fun s -> s.ants)
             |> List.concat
-            |> List.sortBy Ant.distance
+            |> List.sortBy (fun a -> a.distance)
             |> List.take 5
 
         let distances =
             results
-            |> List.map (List.map (fun s -> List.map Ant.distance s.ants))
+            |> List.map (List.map (fun s -> List.map (fun a -> a.distance) s.ants))
 
         let best_of_each_generation = List.map (List.map List.min) distances
 
@@ -317,7 +325,7 @@ module Plot =
 
 conf <-
     { ant_population = 10
-      rand_chance = 0.01
+      rand_chance = 0.3
       pheromone_weight = 1.
       heuristic_weight = 1.
       iteration_count = 600
