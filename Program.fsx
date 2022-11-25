@@ -334,7 +334,7 @@ module Plot =
         |> List.map graph
         |> List.concat
         |> Chart.combine
-        |> Chart.withTitle (sprintf "plik:%s, runs:%d" same.filename same.runs)
+        |> Chart.withTitle (sprintf "plik:%s, ilość uruchomień:%d, %s" same.filename same.runs title)
         |> Chart.withSize (1900, 800)
         |> Chart.withXAxisStyle ("pokolenie")
         |> Chart.withYAxisStyle ("dystans", MinMax = (bounds same.filename))
@@ -344,27 +344,33 @@ module Plot =
 
 
 
-// printf "%A" conf
-let cfg =
-    { ant_population = 10
-      rand_chance = 0.3
-      pheromone_weight = 1.
-      heuristic_weight = 1.
-      iteration_count = 10
-      evaporation_rate = 0.1
-      filename = files[5]
-      runs = 5 }
+for file in files do
+    let cfg =
+        { ant_population = 10
+          rand_chance = 0.3
+          pheromone_weight = 2.
+          heuristic_weight = 3.
+          iteration_count = 200
+          evaporation_rate = 0.1
+          filename = file
+          runs = 3 }
 
-[ (cfg, "ɑ=1, β=1")
-  ({ cfg with pheromone_weight = 2. }, "ɑ=1, β=2")
-  ({ cfg with heuristic_weight = 3. }, "ɑ=3, β=1")
-  ({ cfg with
-      heuristic_weight = 3.
-      pheromone_weight = 2. },
-   "ɑ=3, β=2") ]
-|> Plot.graph_multiple "porównanie wag ɑ i β"
+    [ (cfg, "ɑ=3, β=2")
+      ({ cfg with pheromone_weight = 1. }, "ɑ=3, β=1")
+      ({ cfg with heuristic_weight = 1. }, "ɑ=1, β=2")
+      ({ cfg with
+          heuristic_weight = 1.
+          pheromone_weight = 1. },
+       "ɑ=1, β=1") ]
+    |> Plot.graph_multiple "porównanie wag ɑ i β"
 
-//  ({ cfg with evaporation_rate = 0.5 }, "uwu")
-//  ({ cfg with ant_population = 30 }, "uwu")
-//  ({ cfg with ant_population = 50 }, "uwu")
-//  ({ cfg with rand_chance = 0.1 }, "uwu") ]
+    [ ({ cfg with evaporation_rate = 0.5 }, "0.5")
+      ({ cfg with evaporation_rate = 0.3 }, "0.3")
+      ({ cfg with evaporation_rate = 0.1 }, "0.1")
+      ({ cfg with evaporation_rate = 0.05 }, "0.05") ]
+    |> Plot.graph_multiple "porównanie wpływu szybkości parowania"
+
+    [ ({ cfg with ant_population = 10 }, "10")
+      ({ cfg with ant_population = 30 }, "30")
+      ({ cfg with ant_population = 50 }, "50") ]
+    |> Plot.graph_multiple "porównanie wpływu wielkości populacji"
