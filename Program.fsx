@@ -87,11 +87,11 @@ let files =
 let bounds =
     function
     | "./A-n32-k5.txt" -> (400, 700)
-    | "./A-n80-k10.txt" -> (700, 1100)
-    | "./B-n31-k5.txt" -> (180, 300)
-    | "./B-n78-k10.txt" -> (450, 750)
+    | "./A-n80-k10.txt" -> (1000, 1800)
+    | "./B-n31-k5.txt" -> (180, 350)
+    | "./B-n78-k10.txt" -> (700, 1300)
     | "./P-n16-k8.txt" -> (120, 220)
-    | "./P-n76-k5.txt" -> (700, 1500)
+    | "./P-n76-k5.txt" -> (700, 1200)
     | _ -> 0, 1000
 
 
@@ -129,7 +129,6 @@ module Atrakcja =
     //c24
     //d356
     let idx (a, b) =
-        if a = b then failwith "loopback"
         let (a, b) = order (a, b)
         let a = a.id - 1
         let b = b.id - 1
@@ -337,7 +336,8 @@ module Plot =
         |> Chart.withTitle (sprintf "plik:%s, ilość uruchomień:%d, %s" same.filename same.runs title)
         |> Chart.withSize (1900, 800)
         |> Chart.withXAxisStyle ("pokolenie")
-        |> Chart.withYAxisStyle ("dystans", MinMax = (bounds same.filename))
+        //|> Chart.withYAxisStyle ("dystans", MinMax = (bounds same.filename))
+        |> Chart.withYAxisStyle ("dystans")
         //|> Chart.withXAxis "pokolenie"
         //|> Chart.withYTitle "dystans"
         |> Chart.show
@@ -347,13 +347,18 @@ module Plot =
 for file in files do
     let cfg =
         { ant_population = 10
-          rand_chance = 0.3
+          rand_chance = 0.1
           pheromone_weight = 2.
           heuristic_weight = 3.
-          iteration_count = 200
+          iteration_count = 300
           evaporation_rate = 0.1
           filename = file
-          runs = 3 }
+          runs = 30 }
+
+    [ ({ cfg with rand_chance = 0.3 }, "30%")
+      ({ cfg with rand_chance = 0.1 }, "10%")
+      ({ cfg with rand_chance = 0.02 }, "2%") ]
+    |> Plot.graph_multiple "porównanie wpływu szansy na wybór losowy"
 
     [ (cfg, "ɑ=3, β=2")
       ({ cfg with pheromone_weight = 1. }, "ɑ=3, β=1")
@@ -365,9 +370,7 @@ for file in files do
     |> Plot.graph_multiple "porównanie wag ɑ i β"
 
     [ ({ cfg with evaporation_rate = 0.5 }, "0.5")
-      ({ cfg with evaporation_rate = 0.3 }, "0.3")
-      ({ cfg with evaporation_rate = 0.1 }, "0.1")
-      ({ cfg with evaporation_rate = 0.05 }, "0.05") ]
+      ({ cfg with evaporation_rate = 0.1 }, "0.1") ]
     |> Plot.graph_multiple "porównanie wpływu szybkości parowania"
 
     [ ({ cfg with ant_population = 10 }, "10")
