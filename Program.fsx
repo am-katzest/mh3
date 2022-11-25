@@ -86,7 +86,7 @@ let bounds =
     | "./B-n31-k5.txt" -> (180, 300)
     | "./B-n78-k10.txt" -> (450, 750)
     | "./P-n16-k8.txt" -> (120, 220)
-    | "./P-n76-k5.txt" -> (900, 1500)
+    | "./P-n76-k5.txt" -> (700, 1500)
     | _ -> 0, 1000
 
 
@@ -284,24 +284,17 @@ module Plot =
             results
             |> List.map (List.map (fun s -> List.map (fun a -> a.distance) s.ants))
 
-        let best_of_each_generation = List.map (List.map List.min) distances
-
         let best_so_far =
-            List.map (fun (x :: xs) -> List.scan min x xs) best_of_each_generation
+            distances
+            |> List.map (
+                (List.map List.min)
+                >> (fun (x :: xs) -> List.scan min x xs)
+            )
 
-
-
-        printfn "%A %A" best_so_far[0].Length best_of_each_generation[0].Length
-        ants best_ones
+        printfn "%A %A" best_so_far[0].Length best_so_far[0].Length
+        // ants best_ones
 
         [ Chart.Line(
-              [ 1 .. conf.iteration_count ],
-              (best_of_each_generation
-               |> List.transpose
-               |> List.map List.min),
-              Name = "najlepsze w pokoleniu (min)"
-          )
-          Chart.Line(
               [ 1 .. conf.iteration_count ],
               (best_so_far |> List.transpose |> List.map median),
               Name = "najlepsze dotychcasz (mediana)"
@@ -322,17 +315,26 @@ module Plot =
 
         "meow"
 // printf "%A" conf
-
-conf <-
+let cfg =
     { ant_population = 10
       rand_chance = 0.3
       pheromone_weight = 1.
       heuristic_weight = 1.
-      iteration_count = 600
-      evaporation_rate = 0.5
+      iteration_count = 100
+      evaporation_rate = 0.1
       filename = files[5]
-      runs = 3 }
+      runs = 5 }
 
-#time "on"
-Plot.graph ()
-#time "off"
+for c in
+    [ cfg
+      { cfg with pheromone_weight = 2. }
+      { cfg with heuristic_weight = 3. }
+      { cfg with
+          heuristic_weight = 3.
+          pheromone_weight = 2. }
+      { cfg with evaporation_rate = 0.5 }
+      { cfg with ant_population = 30 }
+      { cfg with ant_population = 50 }
+      { cfg with rand_chance = 0.1 } ] do
+    conf <- c
+    Plot.graph () |> ignore
