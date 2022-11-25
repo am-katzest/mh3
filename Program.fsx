@@ -250,8 +250,13 @@ module Plot =
             Name = sprintf "length = %f" ant.distance
         )
 
-    let ants ants =
-        ants
+    let ants results =
+        results
+        |> List.concat
+        |> List.map (fun s -> s.ants)
+        |> List.concat
+        |> List.sortBy (fun a -> a.distance)
+        |> List.take 5
         |> List.map ant
         |> Chart.combine
         |> Chart.withSize (1100, 1000)
@@ -268,73 +273,91 @@ module Plot =
         else
             (l[(c + 1) / 2] + l[(c - 1) / 2]) / 2.
 
-    let graph () =
+    let make_up_data cfg =
+        conf <- cfg
         Loading.init ()
-        let results = Utils.run_parallel Simulation.simulate conf.runs
+        Utils.run_parallel Simulation.simulate conf.runs
 
-        let best_ones =
-            results
-            |> List.concat
-            |> List.map (fun s -> s.ants)
-            |> List.concat
-            |> List.sortBy (fun a -> a.distance)
-            |> List.take 5
 
-        let distances =
-            results
-            |> List.map (List.map (fun s -> List.map (fun a -> a.distance) s.ants))
-
+    let graph ((cfg, title), color) =
         let best_so_far =
-            distances
+            cfg
+            |> make_up_data
             |> List.map (
-                (List.map List.min)
+                (List.map (fun s -> List.map (fun a -> a.distance) s.ants))
+                >> (List.map List.min)
                 >> (fun (x :: xs) -> List.scan min x xs)
             )
-
-        printfn "%A %A" best_so_far[0].Length best_so_far[0].Length
-        // ants best_ones
 
         [ Chart.Line(
               [ 1 .. conf.iteration_count ],
               (best_so_far |> List.transpose |> List.map median),
-              Name = "najlepsze dotychcasz (mediana)"
+              LineColor = color,
+              Name = "mediana" + title
           )
           Chart.Line(
               [ 1 .. conf.iteration_count ],
               (best_so_far |> List.transpose |> List.map List.min),
-              Name = "najlepsze dotychcasz (minimum)"
+              Name = "najlepsze" + title,
+              Opacity = 0.5,
+              LineColor = color,
+              LineDash = StyleParam.DrawingStyle.Dash
           ) ]
+
+    let add_colors lst =
+        [ "#1f77b4"
+          "#ff7f0e"
+          "#2ca02c"
+          "#d62728"
+          "#9467bd"
+          "#8c564b"
+          "#e377c2"
+          "#7f7f7f"
+          "#bcbd22"
+          "#17becf" ]
+        |> List.map Color.fromHex
+        |> List.take (List.length lst)
+        |> List.zip lst
+
+    let graph_multiple title lst =
+        let same = lst |> List.head |> fst
+
+        lst
+        |> add_colors
+        |> List.map graph
+        |> List.concat
         |> Chart.combine
-        |> Chart.withTitle (sprintf "%A" conf)
+        |> Chart.withTitle (sprintf "plik:%s, runs:%d" same.filename same.runs)
         |> Chart.withSize (1900, 800)
         |> Chart.withXAxisStyle ("pokolenie")
-        |> Chart.withYAxisStyle ("dystans", MinMax = (bounds conf.filename))
+        |> Chart.withYAxisStyle ("dystans", MinMax = (bounds same.filename))
         //|> Chart.withXAxis "pokolenie"
         //|> Chart.withYTitle "dystans"
         |> Chart.show
 
-        "meow"
+
+
 // printf "%A" conf
 let cfg =
     { ant_population = 10
       rand_chance = 0.3
       pheromone_weight = 1.
       heuristic_weight = 1.
-      iteration_count = 100
+      iteration_count = 50
       evaporation_rate = 0.1
       filename = files[5]
-      runs = 5 }
+      runs = 2 }
 
-for c in
-    [ cfg
-      { cfg with pheromone_weight = 2. }
-      { cfg with heuristic_weight = 3. }
-      { cfg with
-          heuristic_weight = 3.
-          pheromone_weight = 2. }
-      { cfg with evaporation_rate = 0.5 }
-      { cfg with ant_population = 30 }
-      { cfg with ant_population = 50 }
-      { cfg with rand_chance = 0.1 } ] do
-    conf <- c
-    Plot.graph () |> ignore
+[ (cfg, "ɑ=1, β=1")
+  ({ cfg with pheromone_weight = 2. }, "ɑ=1, β=2")
+  ({ cfg with heuristic_weight = 3. }, "ɑ=3, β=1")
+  ({ cfg with
+      heuristic_weight = 3.
+      pheromone_weight = 2. },
+   "ɑ=3, β=2") ]
+|> Plot.graph_multiple "porównanie wag ɑ i β"
+
+//  ({ cfg with evaporation_rate = 0.5 }, "uwu")
+//  ({ cfg with ant_population = 30 }, "uwu")
+//  ({ cfg with ant_population = 50 }, "uwu")
+//  ({ cfg with rand_chance = 0.1 }, "uwu") ]
