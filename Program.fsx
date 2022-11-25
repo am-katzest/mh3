@@ -8,9 +8,14 @@ open System.IO
 
 
 module Utils =
+    let meow_when_done f i x =
+        let a = f x
+        printfn "meow %d" i
+        a
+
     let run_parallel f n =
         Array.replicate n ()
-        |> Array.Parallel.map f
+        |> Array.Parallel.mapi (meow_when_done f)
         |> List.ofArray
 
     let rng = Random().NextDouble
@@ -289,6 +294,8 @@ module Plot =
                 >> (fun (x :: xs) -> List.scan min x xs)
             )
 
+        printfn "%s done!" title
+
         [ Chart.Line(
               [ 1 .. conf.iteration_count ],
               (best_so_far |> List.transpose |> List.map median),
@@ -343,10 +350,10 @@ let cfg =
       rand_chance = 0.3
       pheromone_weight = 1.
       heuristic_weight = 1.
-      iteration_count = 50
+      iteration_count = 10
       evaporation_rate = 0.1
       filename = files[5]
-      runs = 2 }
+      runs = 5 }
 
 [ (cfg, "ɑ=1, β=1")
   ({ cfg with pheromone_weight = 2. }, "ɑ=1, β=2")
