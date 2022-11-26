@@ -1,22 +1,21 @@
 ﻿#r "nuget: MathNet.Spatial, 0.6.0"
 #r "nuget: Plotly.NET, 3.0.0"
+#r "nuget: FSharp.Collections.ParallelSeq, 1.2.0"
 
 open MathNet.Spatial.Euclidean
 open System
 open System.IO
-
+open FSharp.Collections.ParallelSeq
 
 
 module Utils =
-    let meow_when_done f i x =
-        let a = f x
+    let meow_when_done f i =
+        let a = f ()
         printfn "meow %d" i
         a
 
     let run_parallel f n =
-        Array.replicate n ()
-        |> Array.Parallel.mapi (meow_when_done f)
-        |> List.ofArray
+        PSeq.init n (meow_when_done f) |> List.ofSeq
 
     let rng = Random().NextDouble
 
@@ -299,12 +298,12 @@ module Plot =
               [ 1 .. conf.iteration_count ],
               (best_so_far |> List.transpose |> List.map median),
               LineColor = color,
-              Name = "mediana" + title
+              Name = title + " (mediana)"
           )
           Chart.Line(
               [ 1 .. conf.iteration_count ],
               (best_so_far |> List.transpose |> List.map List.min),
-              Name = "najlepsze" + title,
+              Name = title + " (najlepsze)",
               Opacity = 0.5,
               LineColor = color,
               LineDash = StyleParam.DrawingStyle.Dash
@@ -350,10 +349,10 @@ for file in files do
           rand_chance = 0.1
           pheromone_weight = 2.
           heuristic_weight = 3.
-          iteration_count = 300
+          iteration_count = 1000
           evaporation_rate = 0.1
           filename = file
-          runs = 30 }
+          runs = 20 }
 
     [ ({ cfg with rand_chance = 0.3 }, "30%")
       ({ cfg with rand_chance = 0.1 }, "10%")
@@ -373,7 +372,16 @@ for file in files do
       ({ cfg with evaporation_rate = 0.1 }, "0.1") ]
     |> Plot.graph_multiple "porównanie wpływu szybkości parowania"
 
-    [ ({ cfg with ant_population = 10 }, "10")
-      ({ cfg with ant_population = 30 }, "30")
-      ({ cfg with ant_population = 50 }, "50") ]
+    [ ({ cfg with
+          ant_population = 10
+          runs = 5 },
+       "10")
+      ({ cfg with
+          ant_population = 30
+          runs = 5 },
+       "30")
+      ({ cfg with
+          ant_population = 50
+          runs = 5 },
+       "50") ]
     |> Plot.graph_multiple "porównanie wpływu wielkości populacji"
