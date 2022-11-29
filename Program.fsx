@@ -54,6 +54,12 @@ module Utils =
 
         inner initial count
 
+    let rec without_item item =
+        function
+        | x :: xs when x = item -> xs
+        | x :: xs -> x :: without_item item xs
+        | [] -> []
+
 type atrakcja = { id: int; loc: Point2D }
 
 type raw_ant =
@@ -200,7 +206,8 @@ module Ant =
     // --
     let move state ant =
         let next = choose_direction state ant
-        let remaining = List.except [ next ] ant.unvisited
+        // lepiej niż O(n^2) się i tak nie da
+        let remaining = Utils.without_item next ant.unvisited
 
         { unvisited = remaining
           visited = next :: ant.visited }
@@ -210,7 +217,7 @@ module Ant =
         let start = Utils.choose_random mapa.lokacje
 
         let starting_ant =
-            { unvisited = List.except [ start ] mapa.lokacje
+            { unvisited = Utils.without_item start mapa.lokacje
               visited = [ start ] }
 
         Utils.iterate (move state) starting_ant (mapa.ilość - 1)
