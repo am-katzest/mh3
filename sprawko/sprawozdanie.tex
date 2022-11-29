@@ -1,0 +1,62 @@
+\documentclass{article}
+\usepackage[a4paper,margin=0.8in]{geometry}
+
+\usepackage{amsmath} \usepackage{amssymb} \usepackage{amsfonts}
+\usepackage{pifont}
+\usepackage{enumitem}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{rotating}
+\usepackage{siunitx}
+\usepackage[polish]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage{multirow}
+\usepackage[yyyymmdd]{datetime} \renewcommand{\dateseparator}{-} % ISO-8601
+\usepackage{tabularx}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{hyperref}
+\usepackage{minted}
+\newcommand{\cljt}[1]{\mintinline{clojure}{#1}}
+\newcommand{\inputgraph}[1]{\newpage \input{#1}\newpage} % p, n w przeglądarce ^w^
+\begin{document}
+\begin{minipage}{0.35\linewidth}
+	\begin{tabular}{lr}
+		Antoni Jończyk & 236551 \\
+		Tomasz Roske   & 236639
+	\end{tabular} \hfill
+\end{minipage}
+\hfill
+\begin{minipage}{0.35\linewidth}
+	\hfill Rok akademicki 2022/23 \par
+	\hfill czwartek, 13:00
+\end{minipage}
+\bigskip \bigskip \bigskip \bigskip \bigskip
+\begin{center}
+	\textbf{Metaheurystyki i ich zastosowania, zadanie 3}\\
+	\bigskip
+	\large implementacja algorytmu mrówkowego
+\end{center}
+\bigskip \bigskip
+\section{Działanie programu}
+\subsection{struktury danych}
+dane dotyczące krawędzi przechowujmy w tablicach jednowymiarowych, indeksowanych w następujący sposób:
+\inputminted{fsharp}{snippets/Program.fsx_index}
+\subsection ruch mrówek
+funkcja lubienia przez mrówkę danej krawędzi:
+\inputminted{fsharp}{snippets/Program.fsx_liek}
+funkcja wybierająca kierunek następnego kroku mrówki:
+\inputminted{fsharp}{snippets/Program.fsx_dir}
+\subsection{symulacja}
+dla każdego kroku symulacji wykonywane są następujące czynności:
+\inputminted{fsharp}{snippets/Program.fsx_advance}
+sumowanie śladów:
+\inputminted{fsharp}{snippets/Program.fsx_trails}
+
+
+\section{analiza wyników}
+\subsection{co to jest i jak to czytać}
+\subsection{prawdopodobieństwo mutacji}
+ten parametr decyduje o względnych szansach mutacji i krzyżowania
+\\
+\end{document}

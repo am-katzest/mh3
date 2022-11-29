@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+set -x
+comment=$1
+dir=$2
+shift 2
+for file in "$@"; do
+    awk -vpath="$dir" -vcmt="$comment" -vfile="$(basename "$file")" '
+$1==cmt && $2=="--" && tag{tag=""}
+$1==cmt && $3=="--" && !tag{tag=$2;next}
+tag{print $0 > path "/" file "_" tag}' "$file"
+done

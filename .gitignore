@@ -1,1 +1,8 @@
 /obj/
+.auctex-auto/
+*.log
+/sprawko/sprawozdanie.pdf
+/sprawko/sprawozdanie.out
+/sprawko/sprawozdanie.aux
+/sprawko/snippets/
+/sprawko/_minted-sprawozdanie/

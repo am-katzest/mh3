@@ -29,7 +29,6 @@ module Utils =
                 if sum' >= pick then h else crawl t sum'
             | [] -> failwith "pusta lista wyborów"
 
-
         crawl lst 0.
 
     let choose_random = choose_weighted (fun _ -> 1.)
@@ -118,21 +117,21 @@ let mutable mapa =
       odległości = [||] }
 
 module Atrakcja =
-    let order (a, b) = if a.id > b.id then (a, b) else (b, a)
-
-    //przechowywujemy dane w jednowymiarowej macieży
-    //dla ilość=4 indeksowanie wygląda tak:
+    // index --
+    //dla ilość=4 index wygląda tak:
     //-abcd
     //a
     //b1
     //c24
     //d356
+    let order (a, b) = if a.id > b.id then (a, b) else (b, a)
+
     let idx (a, b) =
         let (a, b) = order (a, b)
         let a = a.id - 1
         let b = b.id - 1
         a * (a - 1) / 2 + b
-
+// --
 module Loading =
     let read_loc (s: string) =
         match s.Split(" ") |> List.ofArray with
@@ -165,7 +164,7 @@ module Loading =
               odległości = distances }
 
 module Ant =
-
+    // stat --
     let stat ant =
         let edges = List.pairwise ant
         let distance = List.sumBy (fun x -> mapa.odległości[Atrakcja.idx x]) edges
@@ -173,7 +172,9 @@ module Ant =
         { edges = edges
           distance = distance
           visited = ant }
+    // --
 
+    // liek --
     let liek state current destination =
         let i = Atrakcja.idx (current, destination)
         let ph = state.pheromones[i]
@@ -181,7 +182,8 @@ module Ant =
 
         (ph ** conf.pheromone_weight)
         * (heur ** conf.heuristic_weight)
-
+    // --
+    // dir --
     let choose_direction state ant =
         let current = List.head ant
         let avialable = mapa.lokacje |> List.except ant
@@ -190,20 +192,22 @@ module Ant =
             Utils.choose_weighted (liek state current) avialable
         else
             Utils.choose_random avialable
-
+    // --
     let move state ant =
         let next = choose_direction state ant
         next :: ant
 
+    // ant --
     let run state =
         let start = Utils.choose_random mapa.lokacje
 
         Utils.iterate (move state) [ start ] (mapa.ilość - 1)
         |> stat
-
+// --
 
 
 module Simulation =
+    // trails --
     let sum_trails ants =
         let ph = Array.create mapa.odległości.Length 0.0
 
@@ -216,7 +220,8 @@ module Simulation =
                 ph[i] <- ph[i] + weight
 
         ph
-
+    // --
+    // advance --
     let advance state =
         let ants = [ for _ in 1 .. conf.ant_population -> Ant.run state ]
 
@@ -226,7 +231,7 @@ module Simulation =
             |> Array.map2 (+) (sum_trails ants)
 
         { pheromones = phsum; ants = ants }
-
+    // --
 
     let create_initial_state () =
         { pheromones = Array.create mapa.odległości.Length 1e-9
