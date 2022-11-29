@@ -17,6 +17,9 @@ module Utils =
     let run_parallel f n =
         PSeq.init n (meow_when_done f) |> List.ofSeq
 
+    let run_seq f n =
+        Seq.init n (meow_when_done f) |> List.ofSeq
+
     let rng = Random().NextDouble
 
     let choose_weighted key lst =
@@ -53,9 +56,12 @@ module Utils =
 
 type atrakcja = { id: int; loc: Point2D }
 
+type raw_ant =
+    { visited: List<atrakcja>
+      unvisited: List<atrakcja> }
 
 type ant =
-    { visited: List<atrakcja>
+    { path: List<atrakcja>
       edges: List<atrakcja * atrakcja>
       distance: float }
 
@@ -166,12 +172,12 @@ module Loading =
 module Ant =
     // stat --
     let stat ant =
-        let edges = List.pairwise ant
+        let edges = List.pairwise ant.visited
         let distance = List.sumBy (fun x -> mapa.odległości[Atrakcja.idx x]) edges
 
         { edges = edges
           distance = distance
-          visited = ant }
+          path = ant.visited }
     // --
 
     // liek --
@@ -185,23 +191,29 @@ module Ant =
     // --
     // dir --
     let choose_direction state ant =
-        let current = List.head ant
-        let avialable = mapa.lokacje |> List.except ant
+        let current = List.head ant.visited
 
         if Utils.rng () > conf.rand_chance then
-            Utils.choose_weighted (liek state current) avialable
+            Utils.choose_weighted (liek state current) ant.unvisited
         else
-            Utils.choose_random avialable
+            Utils.choose_random ant.unvisited
     // --
     let move state ant =
         let next = choose_direction state ant
-        next :: ant
+        let remaining = List.except [ next ] ant.unvisited
+
+        { unvisited = remaining
+          visited = next :: ant.visited }
 
     // ant --
     let run state =
         let start = Utils.choose_random mapa.lokacje
 
-        Utils.iterate (move state) [ start ] (mapa.ilość - 1)
+        let starting_ant =
+            { unvisited = List.except [ start ] mapa.lokacje
+              visited = [ start ] }
+
+        Utils.iterate (move state) starting_ant (mapa.ilość - 1)
         |> stat
 // --
 
@@ -252,8 +264,8 @@ module Plot =
         printfn "length = %f" ant.distance
 
         Chart.Line(
-            List.map (fun p -> p.loc.X) ant.visited,
-            List.map (fun p -> p.loc.Y) ant.visited,
+            List.map (fun p -> p.loc.X) ant.path,
+            List.map (fun p -> p.loc.Y) ant.path,
             Opacity = 0.5,
             Name = sprintf "length = %f" ant.distance
         )
