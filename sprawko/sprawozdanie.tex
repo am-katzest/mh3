@@ -18,7 +18,11 @@
 \usepackage{hyperref}
 \usepackage{minted}
 \newcommand{\cljt}[1]{\mintinline{clojure}{#1}}
-\newcommand{\inputgraph}[1]{\newpage \input{#1}\newpage} % p, n w przeglądarce ^w^
+\newcommand{\inputgraph}[1]{
+
+  \begin{figure}[H]
+		\includegraphics[width=\linewidth]{#1}
+  \end{figure}}
 \begin{document}
 \begin{minipage}{0.35\linewidth}
 	\begin{tabular}{lr}
@@ -51,22 +55,57 @@ a po jego zakończeniu statystyki są przechowywane w:
 dane dotyczące krawędzi przechowujmy w tablicach jednowymiarowych, indeksowanych w następujący sposób:
 \inputminted{fsharp}{snippets/Program.fsx_index}
 
-\subsection{ruch mrówek}
-funkcja atrakcyjności dla mrówki danej krawędzi:
-\inputminted{fsharp}{snippets/Program.fsx_liek}
-funkcja wybierająca kierunek następnego kroku mrówki:
-\inputminted{fsharp}{snippets/Program.fsx_dir}
-
-\subsection{symulacja}
-dla każdego kroku symulacji wykonywane są następujące czynności:
+\subsection{mrówki}
+dla każdego pokolenia wypuszczamy zadaną liczbę mrówek
 \inputminted{fsharp}{snippets/Program.fsx_advance}
-sumowanie śladów:
+każda odwiedza wszystkie atrakcje, w każdym kroku wybierając następną korzystając z funkcji:
+\inputminted{fsharp}{snippets/Program.fsx_dir}
+dla losowania ruletką szansa na wybranie danej atrakcji zależy od:
+\inputminted{fsharp}{snippets/Program.fsx_liek}
+następnie sumujemy ich ślady z wagą zależną od długości przebytej trasy i
+dodajemy do odpowiednio osłabionego śladu z poprzedniego stanu
 \inputminted{fsharp}{snippets/Program.fsx_trails}
-
-
 \section{analiza wyników}
-\subsection{co to jest i jak to czytać}
-\subsection{prawdopodobieństwo mutacji}
-ten parametr decyduje o względnych szansach mutacji i krzyżowania
-\\
+\subsection{wielkość populacji}
+Na grafach możemy zobaczyć, że większa populacjia zwykle oznacza szybsze
+znajdywanie minimum, jednak wyższy koszt obliczeniowy nie czyni zwiększania tego
+parametru zbyt korzystnym. Ze względu na wysoki koszt obliczeniowy
+postanowiliśmy przeprowadzić mniej symulacji niż dla innych parametrów, stąd na
+niektórych grafach lepsze wyniki uzyskały próby z mniejszą populacją.
+\inputgraph{1l.png}
+\inputgraph{2l.png}
+\inputgraph{3l.png}
+\inputgraph{4l.png}
+\inputgraph{5l.png}
+\inputgraph{6l.png}
+
+\subsection{parametry $\alpha$ i $\beta$}
+$\alpha=3$ we wszystkich próbach okazała się lepsza niż $\alpha=1$ a wartości $\beta=2$ dają
+lepsze wyniki w większości prób niż $\beta=1$
+\inputgraph{1w.png}
+\inputgraph{2w.png}
+\inputgraph{3w.png}
+\inputgraph{4w.png}
+\inputgraph{5w.png}
+\inputgraph{6w.png}
+\subsection{wpływ szansy na wybór losowy}
+dla każdego ruchu mrówka ma pewną szansę na zignorowanie feromonów i
+heurystyki, a wybrania zupełnie losowej ścieżki, na poniższych wykresach
+widzimy, że 0.3 jest dla większości zestawów danych zdecydowanie zbyt dużą
+wartością, sprawdziliśmy również 0.1 i 0.02, które sprawdzają się lepiej dla
+różnych map, dla tych większych lepsze wyniki zapewnia mniejsza wartość.
+\inputgraph{1s.png}
+\inputgraph{2s.png}
+\inputgraph{3s.png}
+\inputgraph{4s.png}
+\inputgraph{5s.png}
+\inputgraph{6s.png}
+\subsection{szybkość parowania}
+wyniki różnią się, jednak nie w żaden łatwy do określenia sposób
+\inputgraph{1p.png}
+\inputgraph{2p.png}
+\inputgraph{3p.png}
+\inputgraph{4p.png}
+\inputgraph{5p.png}
+\inputgraph{6p.png}
 \end{document}
