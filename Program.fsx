@@ -60,21 +60,25 @@ module Utils =
         | x :: xs -> x :: without_item item xs
         | [] -> []
 
+// atrakcja --
 type atrakcja = { id: int; loc: Point2D }
-
-type raw_ant =
+// --
+// antr --
+type ant =
     { visited: List<atrakcja>
       unvisited: List<atrakcja> }
+// --
 
-type ant =
+// ants --
+type ant_stat =
     { path: List<atrakcja>
       edges: List<atrakcja * atrakcja>
       distance: float }
-
+// --
 
 type state =
     { pheromones: array<float>
-      ants: List<ant> }
+      ants: List<ant_stat> }
 
 type conf =
     { ant_population: int
@@ -267,7 +271,7 @@ module Simulation =
 module Plot =
     open Plotly.NET
 
-    let ant (ant: ant) =
+    let ant (ant: ant_stat) =
         printfn "length = %f" ant.distance
 
         Chart.Line(
@@ -366,46 +370,22 @@ module Plot =
         |> Chart.show
 
 
+let cfg =
+    { ant_population = 10
+      rand_chance = 0.1
+      pheromone_weight = 2.
+      heuristic_weight = 3.
+      iteration_count = 100
+      evaporation_rate = 0.1
+      filename = files[1]
+      runs = 5 }
 
-for file in files do
-    let cfg =
-        { ant_population = 10
-          rand_chance = 0.1
-          pheromone_weight = 2.
-          heuristic_weight = 3.
-          iteration_count = 1000
-          evaporation_rate = 0.1
-          filename = file
-          runs = 20 }
+conf <- cfg
+Loading.init ()
 
-    [ ({ cfg with rand_chance = 0.3 }, "30%")
-      ({ cfg with rand_chance = 0.1 }, "10%")
-      ({ cfg with rand_chance = 0.02 }, "2%") ]
-    |> Plot.graph_multiple "porównanie wpływu szansy na wybór losowy"
+#time "on"
 
-    [ (cfg, "ɑ=3, β=2")
-      ({ cfg with pheromone_weight = 1. }, "ɑ=3, β=1")
-      ({ cfg with heuristic_weight = 1. }, "ɑ=1, β=2")
-      ({ cfg with
-          heuristic_weight = 1.
-          pheromone_weight = 1. },
-       "ɑ=1, β=1") ]
-    |> Plot.graph_multiple "porównanie wag ɑ i β"
+Utils.run_seq Simulation.simulate conf.runs
+|> Plot.ants
 
-    [ ({ cfg with evaporation_rate = 0.5 }, "0.5")
-      ({ cfg with evaporation_rate = 0.1 }, "0.1") ]
-    |> Plot.graph_multiple "porównanie wpływu szybkości parowania"
-
-    [ ({ cfg with
-          ant_population = 10
-          runs = 5 },
-       "10")
-      ({ cfg with
-          ant_population = 30
-          runs = 5 },
-       "30")
-      ({ cfg with
-          ant_population = 50
-          runs = 5 },
-       "50") ]
-    |> Plot.graph_multiple "porównanie wpływu wielkości populacji"
+#time "off"

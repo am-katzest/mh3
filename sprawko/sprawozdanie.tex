@@ -39,14 +39,24 @@
 \end{center}
 \bigskip \bigskip
 \section{Działanie programu}
+
 \subsection{struktury danych}
+\indent
+atrakcja:
+\inputminted{fsharp}{snippets/Program.fsx_atrakcja}
+mrówkę w trakcie jej ruchu opisujemy w następujący sposób:
+\inputminted{fsharp}{snippets/Program.fsx_antr}
+a po jego zakończeniu statystyki są przechowywane w:
+\inputminted{fsharp}{snippets/Program.fsx_ants}
 dane dotyczące krawędzi przechowujmy w tablicach jednowymiarowych, indeksowanych w następujący sposób:
 \inputminted{fsharp}{snippets/Program.fsx_index}
-\subsection ruch mrówek
-funkcja lubienia przez mrówkę danej krawędzi:
+
+\subsection{ruch mrówek}
+funkcja atrakcyjności dla mrówki danej krawędzi:
 \inputminted{fsharp}{snippets/Program.fsx_liek}
 funkcja wybierająca kierunek następnego kroku mrówki:
 \inputminted{fsharp}{snippets/Program.fsx_dir}
+
 \subsection{symulacja}
 dla każdego kroku symulacji wykonywane są następujące czynności:
 \inputminted{fsharp}{snippets/Program.fsx_advance}
