@@ -106,7 +106,7 @@ let bounds =
 
 
 
-// statyczna konfiguracja
+// konfiguracja
 let mutable conf =
     { ant_population = 10
       rand_chance = 0.001
@@ -122,7 +122,7 @@ type mapa =
     { lokacje: List<atrakcja>
       ilość: int
       odległości: array<float> }
-// niezmienne dane
+// niezmienne (w trakcie symulacji) dane
 let mutable mapa =
     { lokacje = []
       ilość = 4
