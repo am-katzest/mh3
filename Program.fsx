@@ -58,7 +58,7 @@ module Functions =
           name: string }
 
     let booth =
-        let f x y =
+        let f y x =
             (x + 2. * y + 7.) ** 2. + (2. * x + y - 7.) ** 2.
 
         { fn = f
@@ -70,7 +70,7 @@ module Functions =
           name = "Booth" }
 
     let gold =
-        let f x y =
+        let f y x =
             (1.
              + (x + y + 1.) ** 2.
                * (19. - 14. * x + 3. * x ** 2. - 14. * y
@@ -106,9 +106,9 @@ module Plot =
 
     let display (fn: Functions.test_function) =
         let xw = (fn.x2 - fn.x1) / (float (conf.res - 1))
-        let xs = [ fn.x1 .. xw .. fn.x2 ]
+        let xs = [ fn.x1 .. xw .. fn.x2 + 0.5 * xw ]
         let yw = (fn.y2 - fn.y1) / (float (conf.res - 1))
-        let ys = [ fn.y1 .. yw .. fn.y2 ]
+        let ys = [ fn.y1 .. yw .. fn.y2 + 0.5 * yw ]
 
         let matrix =
             ys
@@ -122,5 +122,5 @@ module Plot =
 
 
 
-Plot.display Functions.gold
+Plot.display Functions.booth
 |> Plotly.NET.Chart.show
