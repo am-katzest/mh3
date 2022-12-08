@@ -48,7 +48,7 @@ module Utils =
     let iterations func initial count =
         let rec inner intermediate n =
             if n = 1 then
-                [ func intermediate ]
+                [ intermediate ]
             else
                 intermediate :: inner (func intermediate) (n - 1)
 
