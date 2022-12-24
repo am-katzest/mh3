@@ -90,14 +90,35 @@ module Functions =
           scale = log10
           name = "Goldstein-Price" }
 
+module Particles =
+    type particle =
+        { position: Point2D
+          velocity: Vector2D
+          best_position: Point2D
+          best_value: float }
 
+    type state =
+        { particles: List<particle>
+          best_one: Option<particle> }
 
+Utils.
+type genfloat = () -> float
 
-type conf = { a: int; b: int; res: int }
+type conf =
+    { particle_count: int
+      inertia: float
+      exp: 
+      res: int
+      fn: Functions.test_function }
 
 
 // konfiguracja
-let mutable conf = { a = 1; b = 10; res = 500 }
+let mutable conf =
+    { particle_count = 10
+      inertia = 0.5
+      exp_coof = 1.0
+      res = 500
+      fn = Functions.booth }
 
 
 
