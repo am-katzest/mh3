@@ -14,6 +14,15 @@ module Utils =
         printfn "meow %d" i
         a
 
+    let rng = Random().NextDouble
+
+
+    let delay2 f x y () = f x y
+
+    let rng_between x y =
+        let delta = y - x
+        x + (rng () * delta)
+
     let run_parallel f n =
         PSeq.init n (meow_when_done f) |> List.ofSeq
 
@@ -32,8 +41,8 @@ module Utils =
 
     let iterations func initial count =
         let rec inner intermediate n =
-            if n = 1 then
-                [ func intermediate ]
+            if n = 0 then
+                [ intermediate ]
             else
                 intermediate :: inner (func intermediate) (n - 1)
 
@@ -90,6 +99,28 @@ module Functions =
           scale = log10
           name = "Goldstein-Price" }
 
+type gennum = unit -> float
+
+type conf =
+    { particle_count: int
+      inertia: float
+      exploration: gennum
+      socialisation: gennum
+      res: int
+      fn: Functions.test_function }
+
+
+// konfiguracja
+let mutable conf =
+    { particle_count = 10
+      inertia = 0.5
+      exploration = Utils.delay2 Utils.rng_between 0.0 1.0
+      socialisation = Utils.rng
+      res = 500
+      fn = Functions.booth }
+
+
+
 module Particles =
     type particle =
         { position: Point2D
@@ -101,24 +132,14 @@ module Particles =
         { particles: List<particle>
           best_one: Option<particle> }
 
-Utils.
-type genfloat = () -> float
+    let move p = p
 
-type conf =
-    { particle_count: int
-      inertia: float
-      exp: 
-      res: int
-      fn: Functions.test_function }
+    let advance s = s
 
+    let simulate () =
+        let init = [ 1..3 ]
+        Utils.iterate
 
-// konfiguracja
-let mutable conf =
-    { particle_count = 10
-      inertia = 0.5
-      exp_coof = 1.0
-      res = 500
-      fn = Functions.booth }
 
 
 
@@ -143,5 +164,7 @@ module Plot =
 
 
 
-Plot.display Functions.booth
-|> Plotly.NET.Chart.show
+//    Plot.display Functions.booth
+//    |> Plotly.NET.Chart.show
+
+Utils.iterations ((+) 1) 0 5
