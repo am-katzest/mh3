@@ -122,23 +122,77 @@ let mutable conf =
 
 
 module Particles =
+    type point = { position: Point2D; value: float }
+
     type particle =
-        { position: Point2D
+        { current: point
           velocity: Vector2D
-          best_position: Point2D
-          best_value: float }
+          best: point }
 
     type state =
         { particles: List<particle>
-          best_one: Option<particle> }
+          best: point }
 
-    let move p = p
+    let probe (p: Point2D) =
+        { position = p
+          value = conf.fn.fn p.X p.Y }
 
-    let advance s = s
+    let new_particle _ =
+        let x = Utils.rng_between conf.fn.x1 conf.fn.x2
+        let y = Utils.rng_between conf.fn.y1 conf.fn.y2
+        let p = probe (Point2D(x, y))
+
+        { current = p
+          velocity = Vector2D(0, 0)
+          best = p }
+
+    let best_position ps =
+        (List.minBy (fun x -> x.current.value) ps).current
+
+    let move b p =
+        let inertia = conf.inertia * p.velocity
+        let (soc: Vector2D) = conf.socialisation () * (b - p.current.position)
+
+        let exp =
+            conf.exploration ()
+            * (p.best.position - p.current.position)
+
+        let velocity' = inertia + soc + exp
+        let position' = probe (p.current.position + velocity')
+
+        let best =
+            if position'.value < p.best.value then
+                position'
+            else
+                p.best
+
+        { current = position'
+          velocity = velocity'
+          best = best }
+
+
+    let advance s =
+        let particles = List.map (move s.best.position) s.particles
+        let new_best = best_position particles
+
+        let best =
+            if s.best.value < new_best.value then
+                s.best
+            else
+                new_best
+
+        { particles = particles; best = best }
 
     let simulate () =
-        let init = [ 1..3 ]
-        Utils.iterate
+        let random_particles = List.init conf.particle_count new_particle
+        let best = best_position random_particles
+
+        let init =
+            { particles = random_particles
+              best = best }
+
+        let res = Utils.iterations advance init 10
+        res
 
 
 
@@ -162,9 +216,7 @@ module Plot =
 //        |> Chart.withXAxisStyle (MinMax = (fn.x1, fn.x2))
 //        |> Chart.withYAxisStyle (MinMax = (fn.y1, fn.y2))
 
-
+(Particles.simulate () |> List.last).best
 
 //    Plot.display Functions.booth
 //    |> Plotly.NET.Chart.show
-
-Utils.iterations ((+) 1) 0 5
