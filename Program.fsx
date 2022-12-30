@@ -230,20 +230,16 @@ module Plot =
 
     let scattersChart generations =
         generations
-        |> Seq.mapi (fun i gen ->
-            let chartVisibility =
-                if i = 0 then
-                    StyleParam.Visible.True
-                else
-                    StyleParam.Visible.False
-
+        |> Seq.map (fun gen ->
             gen
             |> gen2plot
-            |> Chart.withTraceInfo (Visible = chartVisibility))
+            |> Chart.withTraceInfo (Visible = StyleParam.Visible.False))
         |> GenericChart.combine
 
-    let sliderSteps n =
-        [ 0..n ]
+    let sliderSteps gens =
+        let n = List.length gens + 1
+
+        [ 0 .. n - 1 ]
         |> Seq.map (fun i ->
             let visible =
                 // Set true only for the current step
@@ -251,26 +247,40 @@ module Plot =
                 |> Array.init n
                 |> box
 
-            SliderStep.init (Args = [ "visible", visible ], Method = StyleParam.Method.Update, Label = string (i)))
+            let pretty x =
+                sprintf "najlepsza wartość = %f, pozycja (%.2f,%.2f)" x.value x.position.X x.position.Y
 
-    let slider () =
+            let title =
+                match i with
+                | 0 -> conf.fn.name
+                | x when (x <= (n - 1)) -> sprintf "pokolenie %d, %s" (x - 1) (pretty gens[x - 1].best)
+                | _ -> conf.fn.name
+
+            SliderStep.init (
+                Args = [ "visible", visible; "title", title ],
+                Method = StyleParam.Method.Update,
+                Label = string (i)
+            ))
+
+    let slider gens =
         Slider.init (
             CurrentValue = SliderCurrentValue.init (Prefix = "pokolenie: "),
             Padding = Padding.init (T = 50),
-            Steps = sliderSteps (conf.generations + 2)
+            Steps = sliderSteps gens
         )
 
     let cons a b = [ a; b ]
 
     let make_graph () =
-        ()
-        |> Particles.simulate
+        let gens = () |> Particles.simulate
+
+        gens
         |> scattersChart
         |> cons (conf.fn |> display)
         |> Chart.combine
         |> Chart.withXAxisStyle (MinMax = (conf.fn.x1, conf.fn.x2))
         |> Chart.withYAxisStyle (MinMax = (conf.fn.y1, conf.fn.y2))
-        |> Chart.withSlider (slider ())
+        |> Chart.withSlider (slider gens)
         |> Chart.show
 
 
