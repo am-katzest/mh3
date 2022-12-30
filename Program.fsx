@@ -79,7 +79,7 @@ module Functions =
           name = "Booth" }
 
     let gold =
-        let f y x =
+        let f x y =
             (1.
              + (x + y + 1.) ** 2.
                * (19. - 14. * x + 3. * x ** 2. - 14. * y
@@ -94,8 +94,8 @@ module Functions =
         { fn = f
           x1 = -2
           x2 = 2
-          y1 = -2
-          y2 = 2
+          y1 = -3
+          y2 = 1
           scale = log10
           name = "Goldstein-Price" }
 
@@ -113,13 +113,13 @@ type conf =
 
 // konfiguracja
 let mutable conf =
-    { particle_count = 10
-      inertia = 0.5
+    { particle_count = 50
+      inertia = 0.9
       exploration = Utils.delay2 Utils.rng_between 0.0 1.0
       socialisation = Utils.rng
-      generations = 10
+      generations = 100
       res = 100
-      fn = Functions.booth }
+      fn = Functions.gold }
 
 
 
@@ -210,19 +210,21 @@ module Plot =
         let yw = (fn.y2 - fn.y1) / (float (conf.res - 1))
         let ys = [ fn.y1 .. yw .. fn.y2 + 0.5 * yw ]
 
+        let xs, ys = ys, xs
+
         let matrix =
             ys
             |> List.map (fun x -> List.map (fn.scale << (fn.fn x)) xs)
 
 
-        Chart.Heatmap(matrix, X = xs, Y = ys)
+        Chart.Heatmap(matrix, X = ys, Y = xs, Transpose = true)
         |> Chart.withTitle (fn.name)
 
 
     let gen2plot state =
         let xys =
             state.particles
-            |> List.map (fun l -> (-l.current.position.X, -l.current.position.Y)) // that hack is definitely not going to bite me in the ass 😌
+            |> List.map (fun l -> (l.current.position.X, l.current.position.Y))
             |> Seq.ofList
 
         Chart.Point(xys)
