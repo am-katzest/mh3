@@ -106,6 +106,7 @@ type conf =
       inertia: float
       exploration: gennum
       socialisation: gennum
+      generations: int
       res: int
       fn: Functions.test_function }
 
@@ -116,7 +117,8 @@ let mutable conf =
       inertia = 0.5
       exploration = Utils.delay2 Utils.rng_between 0.0 1.0
       socialisation = Utils.rng
-      res = 500
+      generations = 10
+      res = 100
       fn = Functions.booth }
 
 
@@ -191,7 +193,7 @@ module Particles =
             { particles = random_particles
               best = best }
 
-        let res = Utils.iterations advance init 10
+        let res = Utils.iterations advance init conf.generations
         res
 
 
@@ -199,6 +201,8 @@ module Particles =
 
 module Plot =
     open Plotly.NET
+    open Plotly.NET.LayoutObjects
+    open Particles
 
     let display (fn: Functions.test_function) =
         let xw = (fn.x2 - fn.x1) / (float (conf.res - 1))
@@ -213,10 +217,61 @@ module Plot =
 
         Chart.Heatmap(matrix, X = xs, Y = ys)
         |> Chart.withTitle (fn.name)
-//        |> Chart.withXAxisStyle (MinMax = (fn.x1, fn.x2))
-//        |> Chart.withYAxisStyle (MinMax = (fn.y1, fn.y2))
 
-(Particles.simulate () |> List.last).best
 
-//    Plot.display Functions.booth
-//    |> Plotly.NET.Chart.show
+    let gen2plot state =
+        let xys =
+            state.particles
+            |> List.map (fun l -> (-l.current.position.X, -l.current.position.Y)) // that hack is definitely not going to bite me in the ass 😌
+            |> Seq.ofList
+
+        Chart.Point(xys)
+
+
+    let scattersChart generations =
+        generations
+        |> Seq.mapi (fun i gen ->
+            let chartVisibility =
+                if i = 0 then
+                    StyleParam.Visible.True
+                else
+                    StyleParam.Visible.False
+
+            gen
+            |> gen2plot
+            |> Chart.withTraceInfo (Visible = chartVisibility))
+        |> GenericChart.combine
+
+    let sliderSteps n =
+        [ 0..n ]
+        |> Seq.map (fun i ->
+            let visible =
+                // Set true only for the current step
+                (fun index -> index = 0 || index = i)
+                |> Array.init n
+                |> box
+
+            SliderStep.init (Args = [ "visible", visible ], Method = StyleParam.Method.Update, Label = string (i)))
+
+    let slider () =
+        Slider.init (
+            CurrentValue = SliderCurrentValue.init (Prefix = "pokolenie: "),
+            Padding = Padding.init (T = 50),
+            Steps = sliderSteps (conf.generations + 2)
+        )
+
+    let cons a b = [ a; b ]
+
+    let make_graph () =
+        ()
+        |> Particles.simulate
+        |> scattersChart
+        |> cons (conf.fn |> display)
+        |> Chart.combine
+        |> Chart.withXAxisStyle (MinMax = (conf.fn.x1, conf.fn.x2))
+        |> Chart.withYAxisStyle (MinMax = (conf.fn.y1, conf.fn.y2))
+        |> Chart.withSlider (slider ())
+        |> Chart.show
+
+
+Plot.make_graph ()
