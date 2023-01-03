@@ -67,7 +67,7 @@ module Functions =
           name: string }
 
     let booth =
-        let f y x =
+        let f x y =
             (x + 2. * y + 7.) ** 2. + (2. * x + y - 7.) ** 2.
 
         { fn = f
@@ -77,6 +77,33 @@ module Functions =
           y2 = 10
           scale = log10
           name = "Booth" }
+
+    let himmelblau =
+        let f x y =
+            (x * x + y - 11.) ** 2. + (x + y * y - 7.) ** 2.
+
+        { fn = f
+          x1 = -5
+          x2 = 5
+          y1 = -5
+          y2 = 5
+          scale = log10
+          name = "Himmelblau" }
+
+    let Schaffer2 =
+        let f x y =
+            0.5
+            + ((sin (x * x - y * y)) ** 2. - 0.5)
+              / ((1. + 0.001 * (x * x + y * y)) ** 2.)
+
+        { fn = f
+          x1 = -100
+          x2 = 100
+          y1 = -100
+          y2 = 100
+          scale = id
+          name = "Schaffer function N.2" }
+
 
     let gold =
         let f x y =
@@ -113,14 +140,13 @@ type conf =
 
 // konfiguracja
 let mutable conf =
-    { particle_count = 50
-      inertia = 0.9
+    { particle_count = 10
+      inertia = 0.7
       exploration = Utils.delay2 Utils.rng_between 0.0 1.0
       socialisation = Utils.rng
-      generations = 100
-      res = 100
-      fn = Functions.gold }
-
+      generations = 50
+      res = 1000
+      fn = Functions.Schaffer2 }
 
 
 module Particles =
