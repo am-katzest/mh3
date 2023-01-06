@@ -174,8 +174,12 @@ module Particles =
           velocity = Vector2D(0, 0)
           best = p }
 
+    let better a b = if a.value < b.value then a else b
+
     let best_position ps =
-        (List.minBy (fun x -> x.current.value) ps).current
+        ps
+        |> List.map (fun x -> x.current)
+        |> List.reduce better
 
     let move b p =
         let inertia = conf.inertia * p.velocity
@@ -188,42 +192,27 @@ module Particles =
         let velocity' = inertia + soc + exp
         let position' = probe (p.current.position + velocity')
 
-        let best =
-            if position'.value < p.best.value then
-                position'
-            else
-                p.best
-
         { current = position'
           velocity = velocity'
-          best = best }
+          best = better position' p.best }
 
-
+    // advance --
     let advance s =
         let particles = List.map (move s.best.position) s.particles
-        let new_best = best_position particles
 
-        let best =
-            if s.best.value < new_best.value then
-                s.best
-            else
-                new_best
-
-        { particles = particles; best = best }
-
+        { particles = particles
+          best = better s.best (best_position particles) }
+    // --
+    // simulate --
     let simulate () =
         let random_particles = List.init conf.particle_count new_particle
-        let best = best_position random_particles
 
         let init =
             { particles = random_particles
-              best = best }
+              best = best_position random_particles }
 
-        let res = Utils.iterations advance init conf.generations
-        res
-
-
-
+        Utils.iterations advance init conf.generations
+// --
 
 module Plot =
     open Plotly.NET
@@ -241,7 +230,6 @@ module Plot =
         let matrix =
             ys
             |> List.map (fun x -> List.map (fn.scale << (fn.fn x)) xs)
-
 
         Chart.Heatmap(matrix, X = ys, Y = xs, Transpose = true)
         |> Chart.withTitle (fn.name)
