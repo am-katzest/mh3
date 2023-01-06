@@ -60,6 +60,7 @@ module Functions =
     type test_function =
         { fn: float -> float -> float
           scale: float -> float
+          min: float
           x1: float
           x2: float
           y1: float
@@ -71,6 +72,7 @@ module Functions =
             (x + 2. * y + 7.) ** 2. + (2. * x + y - 7.) ** 2.
 
         { fn = f
+          min = 0
           x1 = -10
           x2 = 10
           y1 = -10
@@ -83,6 +85,7 @@ module Functions =
             (x * x + y - 11.) ** 2. + (x + y * y - 7.) ** 2.
 
         { fn = f
+          min = 0
           x1 = -5
           x2 = 5
           y1 = -5
@@ -97,6 +100,7 @@ module Functions =
               / ((1. + 0.001 * (x * x + y * y)) ** 2.)
 
         { fn = f
+          min = 0
           x1 = -100
           x2 = 100
           y1 = -100
@@ -119,6 +123,7 @@ module Functions =
                     + 27. * y ** 2.))
 
         { fn = f
+          min = 3
           x1 = -2
           x2 = 2
           y1 = -3
@@ -145,11 +150,12 @@ let mutable conf =
       exploration = Utils.delay2 Utils.rng_between 0.0 1.0
       socialisation = Utils.rng
       generations = 50
-      res = 1000
-      fn = Functions.Schaffer2 }
+      res = 100
+      fn = Functions.himmelblau }
 
 
 module Particles =
+    // types --
     type point = { position: Point2D; value: float }
 
     type particle =
@@ -164,7 +170,8 @@ module Particles =
     let probe (p: Point2D) =
         { position = p
           value = conf.fn.fn p.X p.Y }
-
+    // --
+    // newpart --
     let new_particle _ =
         let x = Utils.rng_between conf.fn.x1 conf.fn.x2
         let y = Utils.rng_between conf.fn.y1 conf.fn.y2
@@ -173,6 +180,7 @@ module Particles =
         { current = p
           velocity = Vector2D(0, 0)
           best = p }
+    // --
 
     let better a b = if a.value < b.value then a else b
 
@@ -212,7 +220,9 @@ module Particles =
               best = best_position random_particles }
 
         Utils.iterations advance init conf.generations
-// --
+    // --
+    let extract sims =
+        sims |> List.map (fun x -> x.best.value)
 
 module Plot =
     open Plotly.NET
