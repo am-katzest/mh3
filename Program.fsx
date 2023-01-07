@@ -131,6 +131,21 @@ module Functions =
           scale = log10
           name = "Goldstein-Price" }
 
+    let Rastrigin =
+        let A = 10.
+        let n = 2.
+        let s x = x * x - A * (cos (2. * Math.PI * x))
+        let f x1 x2 = A * n + (s x1) + (s x2)
+
+        { fn = f
+          min = 0
+          x1 = -5.12
+          x2 = 5.12
+          y1 = -5.12
+          y2 = 5.12
+          scale = id
+          name = "Rastrigin" }
+
 type gennum = unit -> float
 
 type conf =
@@ -153,7 +168,7 @@ let mutable conf =
       generations = 50
       res = 100
       sample = 50
-      fn = Functions.himmelblau }
+      fn = Functions.Rastrigin }
 
 
 module Particles =
@@ -386,12 +401,7 @@ module Plot =
 
 
 
-Plot.make_graph ()
-
-
-for fn in
-    [ Functions.booth
-      Functions.himmelblau ] do
+for fn in [ Functions.Rastrigin; Functions.gold ] do
     let cfg =
         { particle_count = 10
           inertia = 0.7
