@@ -140,6 +140,7 @@ type conf =
       socialisation: gennum
       generations: int
       res: int
+      sample: int
       fn: Functions.test_function }
 
 
@@ -151,6 +152,7 @@ let mutable conf =
       socialisation = Utils.rng
       generations = 50
       res = 100
+      sample = 50
       fn = Functions.himmelblau }
 
 
@@ -308,6 +310,74 @@ module Plot =
         |> Chart.withYAxisStyle (MinMax = (conf.fn.y1, conf.fn.y2))
         |> Chart.withSlider (slider gens)
         |> Chart.show
+
+
+    let median l =
+        let c = List.length l
+        let l = List.sort l
+
+        if c % 2 = 1 then
+            l[c / 2]
+        else
+            (l[(c + 1) / 2] + l[(c - 1) / 2]) / 2.
+
+    let make_up_data cfg =
+        conf <- cfg
+        Utils.run_parallel (Particles.extract << Particles.simulate) conf.sample
+
+
+    let graph ((cfg, title), color) =
+        let best_so_far = cfg |> make_up_data
+
+        printfn "%s done!" title
+
+        [ Chart.Line(
+              [ 1 .. conf.generations ],
+              (best_so_far |> List.transpose |> List.map median),
+              LineColor = color,
+              Name = title + " (mediana)"
+          )
+          Chart.Line(
+              [ 1 .. conf.generations ],
+              (best_so_far |> List.transpose |> List.map List.min),
+              Name = title + " (najlepsze)",
+              Opacity = 0.5,
+              LineColor = color,
+              LineDash = StyleParam.DrawingStyle.Dash
+          ) ]
+
+    let add_colors lst =
+        [ "#1f77b4"
+          "#ff7f0e"
+          "#2ca02c"
+          "#d62728"
+          "#9467bd"
+          "#8c564b"
+          "#e377c2"
+          "#7f7f7f"
+          "#bcbd22"
+          "#17becf" ]
+        |> List.map Color.fromHex
+        |> List.take (List.length lst)
+        |> List.zip lst
+
+    let graph_multiple title lst =
+        let same = lst |> List.head |> fst
+
+        lst
+        |> add_colors
+        |> List.map graph
+        |> List.concat
+        |> Chart.combine
+        |> Chart.withTitle (sprintf "funkcja:%s, ilość uruchomień:%d, %s" same.fn.name same.sample title)
+        |> Chart.withSize (1900, 800)
+        |> Chart.withXAxisStyle ("iteracja")
+        //|> Chart.withYAxisStyle ("dystans", MinMax = (bounds same.filename))
+        |> Chart.withYAxisStyle ("wynik")
+        //|> Chart.withXAxis "pokolenie"
+        //|> Chart.withYTitle "dystans"
+        |> Chart.show
+
 
 
 Plot.make_graph ()
