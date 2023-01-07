@@ -1,12 +1,13 @@
 ﻿#r "nuget: MathNet.Spatial, 0.6.0"
 #r "nuget: Plotly.NET, 3.0.0"
 #r "nuget: FSharp.Collections.ParallelSeq, 1.2.0"
+#r "nuget: FSharp.Stats, 0.4.9"
 
 open MathNet.Spatial.Euclidean
 open System
 open System.IO
 open FSharp.Collections.ParallelSeq
-
+open FSharp.Stats
 
 module Utils =
     let meow_when_done f i =
@@ -15,7 +16,6 @@ module Utils =
         a
 
     let rng = Random().NextDouble
-
 
     let delay2 f x y () = f x y
 
@@ -311,39 +311,45 @@ module Plot =
         |> Chart.withSlider (slider gens)
         |> Chart.show
 
-
-    let median l =
-        let c = List.length l
-        let l = List.sort l
-
-        if c % 2 = 1 then
-            l[c / 2]
-        else
-            (l[(c + 1) / 2] + l[(c - 1) / 2]) / 2.
-
     let make_up_data cfg =
         conf <- cfg
+
         Utils.run_parallel (Particles.extract << Particles.simulate) conf.sample
 
 
     let graph ((cfg, title), color) =
-        let best_so_far = cfg |> make_up_data
+        let best_so_far = cfg |> make_up_data |> List.transpose
+
+        let worst5 =
+            best_so_far
+            |> List.map (Seq.ofList >> Quantile.mode 0.05)
+
+        let best5 =
+            best_so_far
+            |> List.map (Seq.ofList >> Quantile.mode 0.95)
+
+        let mean =
+            best_so_far
+            |> List.map (Seq.ofList >> Quantile.mode 0.5)
 
         printfn "%s done!" title
 
-        [ Chart.Line(
-              [ 1 .. conf.generations ],
-              (best_so_far |> List.transpose |> List.map median),
-              LineColor = color,
-              Name = title + " (mediana)"
-          )
+        [ Chart.Line([ 1 .. conf.generations ], mean, LineColor = color, Name = title + " (mediana)")
           Chart.Line(
               [ 1 .. conf.generations ],
-              (best_so_far |> List.transpose |> List.map List.min),
-              Name = title + " (najlepsze)",
+              best5,
+              Name = title + " (najlepsze 5%)",
               Opacity = 0.5,
               LineColor = color,
               LineDash = StyleParam.DrawingStyle.Dash
+          )
+          Chart.Line(
+              [ 1 .. conf.generations ],
+              worst5,
+              Name = title + " (najgorsze 5%)",
+              Opacity = 0.5,
+              LineColor = color,
+              LineDash = StyleParam.DrawingStyle.DashDot
           ) ]
 
     let add_colors lst =
@@ -381,3 +387,22 @@ module Plot =
 
 
 Plot.make_graph ()
+
+
+for fn in
+    [ Functions.booth
+      Functions.himmelblau ] do
+    let cfg =
+        { particle_count = 10
+          inertia = 0.7
+          exploration = Utils.delay2 Utils.rng_between 0.0 1.0
+          socialisation = Utils.rng
+          generations = 50
+          res = 100
+          sample = 500
+          fn = fn }
+
+    [ ({ cfg with inertia = 0.1 }, "0.1")
+      ({ cfg with inertia = 0.5 }, "0.5")
+      ({ cfg with inertia = 0.9 }, "0.9") ]
+    |> Plot.graph_multiple "porównanie wpływu inercji"
