@@ -152,7 +152,7 @@ type conf =
     { particle_count: int
       inertia: float
       exploration: gennum
-      socialisation: gennum
+      socialization: gennum
       generations: int
       res: int
       sample: int
@@ -164,7 +164,7 @@ let mutable conf =
     { particle_count = 10
       inertia = 0.7
       exploration = Utils.delay2 Utils.rng_between 0.0 1.0
-      socialisation = Utils.rng
+      socialization = Utils.rng
       generations = 50
       res = 100
       sample = 500
@@ -208,7 +208,7 @@ module Particles =
 
     let move b p =
         let inertia = conf.inertia * p.velocity
-        let (soc: Vector2D) = conf.socialisation () * (b - p.current.position)
+        let (soc: Vector2D) = conf.socialization () * (b - p.current.position)
 
         let exp =
             conf.exploration ()
@@ -408,7 +408,7 @@ for (fn, cnt) in
         { particle_count = cnt
           inertia = 0.5
           exploration = Utils.rng
-          socialisation = Utils.rng
+          socialization = Utils.rng
           generations = 50
           res = 100
           sample = 1000 // 00
@@ -440,20 +440,20 @@ for (fn, cnt) in
     [ //-
       ({ cfg with
           exploration = Utils.rng
-          socialisation = Utils.rng },
+          socialization = Utils.rng },
        "s=0-1 e=0-1")
       ({ cfg with
           exploration = (fun _ -> 0.5)
-          socialisation = (fun _ -> 0.5) },
+          socialization = (fun _ -> 0.5) },
        "s=0.5 e=0.5")
       ({ cfg with
           exploration = Utils.delay2 Utils.rng_between 1.0 2.0
-          socialisation = Utils.rng },
+          socialization = Utils.rng },
        "s=0-1 e=1-2")
       ({ cfg with
           exploration = Utils.rng
-          socialisation = Utils.delay2 Utils.rng_between 1.0 2.0 },
+          socialization = Utils.delay2 Utils.rng_between 1.0 2.0 },
        "s=1-2 e=0-1")
       //-
       ]
-    |> Plot.graph_multiple "porównanie wpływu socialisacji i exploracji"
+    |> Plot.graph_multiple "porównanie wpływu socializacji i exploracji"
