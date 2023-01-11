@@ -12,7 +12,7 @@ open FSharp.Stats
 module Utils =
     let meow_when_done f i =
         let a = f ()
-        printfn "meow %d" i
+        if false then printfn "meow %d" i
         a
 
     let rng = Random().NextDouble
@@ -167,7 +167,7 @@ let mutable conf =
       socialisation = Utils.rng
       generations = 50
       res = 100
-      sample = 50
+      sample = 500
       fn = Functions.Rastrigin }
 
 
@@ -337,11 +337,11 @@ module Plot =
 
         let worst5 =
             best_so_far
-            |> List.map (Seq.ofList >> Quantile.mode 0.05)
+            |> List.map (Seq.ofList >> Quantile.mode 0.9)
 
         let best5 =
             best_so_far
-            |> List.map (Seq.ofList >> Quantile.mode 0.95)
+            |> List.map (Seq.ofList >> Quantile.mode 0.1)
 
         let mean =
             best_so_far
@@ -353,7 +353,7 @@ module Plot =
           Chart.Line(
               [ 1 .. conf.generations ],
               best5,
-              Name = title + " (najlepsze 5%)",
+              Name = title + " (najlepsze 10%)",
               Opacity = 0.5,
               LineColor = color,
               LineDash = StyleParam.DrawingStyle.Dash
@@ -361,7 +361,7 @@ module Plot =
           Chart.Line(
               [ 1 .. conf.generations ],
               worst5,
-              Name = title + " (najgorsze 5%)",
+              Name = title + " (najgorsze 10%)",
               Opacity = 0.5,
               LineColor = color,
               LineDash = StyleParam.DrawingStyle.DashDot
@@ -401,18 +401,59 @@ module Plot =
 
 
 
-for fn in [ Functions.Rastrigin; Functions.gold ] do
+for (fn, cnt) in
+    [ (Functions.Schaffer2, 15)
+      (Functions.Rastrigin, 10) ] do
     let cfg =
-        { particle_count = 10
-          inertia = 0.7
-          exploration = Utils.delay2 Utils.rng_between 0.0 1.0
+        { particle_count = cnt
+          inertia = 0.5
+          exploration = Utils.rng
           socialisation = Utils.rng
           generations = 50
           res = 100
-          sample = 500
+          sample = 1000 // 00
           fn = fn }
 
-    [ ({ cfg with inertia = 0.1 }, "0.1")
+    let cfg_smol = { cfg with sample = cfg.sample / 10 }
+
+    [ //-
+      ({ cfg with inertia = 0.0 }, "0.0")
       ({ cfg with inertia = 0.5 }, "0.5")
-      ({ cfg with inertia = 0.9 }, "0.9") ]
+      ({ cfg with inertia = 0.9 }, "0.9")
+      //-
+      ]
     |> Plot.graph_multiple "porównanie wpływu inercji"
+
+
+    [ //-
+      ({ cfg_smol with particle_count = 200 }, "200")
+      ({ cfg_smol with particle_count = 50 }, "50")
+      ({ cfg_smol with particle_count = 20 }, "20")
+      ({ cfg_smol with particle_count = 10 }, "10")
+      ({ cfg_smol with particle_count = 5 }, "5")
+      ({ cfg_smol with particle_count = 2 }, "2")
+      //-
+      ]
+    |> Plot.graph_multiple "porównanie wpływu ilości cząstek"
+
+
+    [ //-
+      ({ cfg with
+          exploration = Utils.rng
+          socialisation = Utils.rng },
+       "s=0-1 e=0-1")
+      ({ cfg with
+          exploration = (fun _ -> 0.5)
+          socialisation = (fun _ -> 0.5) },
+       "s=0.5 e=0.5")
+      ({ cfg with
+          exploration = Utils.delay2 Utils.rng_between 1.0 2.0
+          socialisation = Utils.rng },
+       "s=0-1 e=1-2")
+      ({ cfg with
+          exploration = Utils.rng
+          socialisation = Utils.delay2 Utils.rng_between 1.0 2.0 },
+       "s=1-2 e=0-1")
+      //-
+      ]
+    |> Plot.graph_multiple "porównanie wpływu socialisacji i exploracji"
